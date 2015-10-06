@@ -18,6 +18,18 @@ void printCliVersion()
     std::cout<<std::endl;
 }
 
+//std::pair<std::string, std::string> reg_foo(const std::string& s)
+//{
+//    size_t pos = s.find("-A");
+//    if (pos != std::string::npos) {
+//        std::cout<<s.substr(pos+2,s.size())<<std::endl;
+//        return make_pair(std::string(), std::string());
+//        //return make_pair(s.substr(5), std::string());
+//    } else {
+//        return make_pair(std::string(), std::string());
+//    }
+//}
+
 int main (int argc, char *argv[]) 
 {
     boost_po::options_description mainopts("Main options");
@@ -34,13 +46,20 @@ int main (int argc, char *argv[])
             ("vercmp,Y",  "compare versions")
             ;
 
-    boost_po::options_description add("Add options");
-    add.add_options()
+    boost_po::options_description addOpts("Add options");
+    addOpts.add_options()
             ("nodeps,d",   "skip dependency checks")
             ("force,f",    "force install, overwrite conflicting files")
             ("noarch",     "install the package, even if it is for an other arch")
             ;
     boost_po::options_description remove("Remove options");
+    remove.add_options()
+    ("cascade,c",       "remove packages and all packages that depend on them")
+    ("nodeps,d",        "skip dependency checks")
+    ("dbonly,k",        "only remove database entry, do not remove files")
+    ("nosave,n",        "remove configuration files as well")
+    ("recursive,s",     "remove dependencies also (that won't break packages)")
+    ;
     boost_po::options_description upgrade("Upgrade options");
     boost_po::options_description freshen("Freshen options");
     boost_po::options_description query("Query options");
@@ -49,7 +68,19 @@ int main (int argc, char *argv[])
     boost_po::options_description vercmp("Vercmp options");
 
     boost_po::variables_map mainvm;
-    boost_po::store(boost_po::parse_command_line(argc, argv, mainopts), mainvm);
+
+//    try {
+
+//    boost_po::store(boost_po::parse_command_line(argc, argv, mainopts), mainvm);
+
+//    }
+//    catch(std::exception& e) {
+//        std::cout << e.what() << "\n";
+//    }
+
+    boost_po::parsed_options parsedMain = boost_po::command_line_parser(argc, argv).options(mainopts).allow_unregistered().run();
+
+    boost_po::store(parsedMain, mainvm);
 
     if(mainvm.count("help") || argc<=1) {
         std::cout<<mainopts;
@@ -61,35 +92,43 @@ int main (int argc, char *argv[])
         EXIT_SUCCESS;
     }
 
-    if(mainvm.count("add") || argc<=1) {
+    std::vector<std::string> remainingOpts = boost_po::collect_unrecognized(parsedMain.options, boost_po::include_positional);
+
+    if(mainvm.count("add")) {
+        std::cout<<"add chosen and rest to parse is "<<remainingOpts[0]<<std::endl;
+        boost_po::variables_map addvm;
+        addOpts.add(mainopts);
+        parsedMain = boost_po::command_line_parser(remainingOpts).options(addOpts).allow_unregistered().run();
+        boost_po::store(parsedMain, addvm);
+        if(addvm.count("nodeps")) {
+            std::cout<<"no deps chosen"<<std::endl;
+        }
+    }
+
+    if(mainvm.count("remove")) {
         std::cout<<mainopts;
     }
 
-    if(mainvm.count("remove") || argc<=1) {
+    if(mainvm.count("upgrade")) {
         std::cout<<mainopts;
     }
 
-    if(mainvm.count("upgrade") || argc<=1) {
+    if(mainvm.count("freshen")) {
         std::cout<<mainopts;
     }
 
-    if(mainvm.count("freshen") || argc<=1) {
+    if(mainvm.count("query")) {
+        std::cout<<mainopts;
+    }
+    if(mainvm.count("sync")) {
         std::cout<<mainopts;
     }
 
-    if(mainvm.count("query") || argc<=1) {
-        std::cout<<mainopts;
-    }
-    if(mainvm.count("sync") || argc<=1) {
+    if(mainvm.count("ps")) {
         std::cout<<mainopts;
     }
 
-    if(mainvm.count("ps") || argc<=1) {
+    if(mainvm.count("vercmp")) {
         std::cout<<mainopts;
     }
-
-    if(mainvm.count("vercmp") || argc<=1) {
-        std::cout<<mainopts;
-    }
-
 }
