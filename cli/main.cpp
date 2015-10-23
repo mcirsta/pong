@@ -50,6 +50,13 @@ std::map<std::string, const char*> pOpts {{"help",          "produce a help mess
                                           {"refresh",       "download fresh package databases from the server"},
                                           {"ignore",        "<pkg>  ignore a package upgrade (can be used more than once)"},
                                           {"nointegrity",   "don't check the integrity of the packages using sha1"},
+                                          {"config",        "<path> set an alternate configuration file"},
+                                          {"noconfirm",     "do not ask for anything confirmation"},
+                                          {"ask",           "<number> pre-specify answers for questions (see manpage)"},
+                                          {"regex",         "treat targets as regexs if no package found"},
+                                          {"verbose",       "be verbose"},
+                                          {"root",          "<path>   set an alternate installation root"},
+                                          {"dbpath,b",      "<path> set an alternate database location"},
                                           };
 
 void printCliVersion()
@@ -66,6 +73,25 @@ void printCliVersion()
 
 int main (int argc, char *argv[]) 
 {
+    boost_po::options_description commonOpts("Version compare options");
+    commonOpts.add_options()
+            ("config", boost_po::value<std::string>(), pOpts["config"])
+            ("noconfirm",     pOpts["noconfirm"])
+            ("ask",  boost_po::value<int>(), pOpts["ask"])
+            ("regex",         pOpts["regex"])
+            ("verbose,v",     pOpts["verbose"])
+            ("root,r",   boost_po::value<std::string>(), pOpts["root"])
+            ("dbpath,b", boost_po::value<std::string>(), pOpts["dbpath"])
+            ("input", boost_po::value< std::vector<std::string>>(), pOpts["input"])
+            ("help,h",          pOpts["help"])
+            ;
+    boost_po::options_description addRemoveOpts("Install only options");
+    addRemoveOpts.add_options()
+            ("noprogressbar", "do not show a progress bar when downloading files")
+            ("noscriptlet",   "do not execute the install scriptlet if there is any")
+            ;
+    addRemoveOpts.add(commonOpts);
+
     boost_po::options_description mainOpts("Main options");
     mainOpts.add_options()
             ("help,h",          pOpts["help"])
@@ -84,9 +110,8 @@ int main (int argc, char *argv[])
             ("nodeps,d",        pOpts["nodeps"])
             ("force,f",         pOpts["force"])
             ("noarch",          pOpts["noarch"])
-            ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
-            ("help,h",          pOpts["help"])
             ;
+    addOpts.add(addRemoveOpts);
     boost_po::options_description removeOpts("Remove options");
     removeOpts.add_options()
             ("cascade,c",       pOpts["cascade"])
@@ -94,17 +119,15 @@ int main (int argc, char *argv[])
             ("dbonly,k",        pOpts["dbonly"])
             ("nosave,n",        pOpts["nosave"])
             ("recursive,s",     pOpts["recursive"])
-            ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
-            ("help,h",          pOpts["help"])
             ;
+    removeOpts.add(addRemoveOpts);
     boost_po::options_description upgradeOpts("Upgrade options");
     upgradeOpts.add_options()
             ("nodeps,d",        pOpts["nodeps"])
             ("force,f",         pOpts["force"])
             ("freshen,e",       "only upgrade this package if it is already installed and at a lesser version")
-            ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
-            ("help,h",          pOpts["help"])
             ;
+    upgradeOpts.add(addRemoveOpts);
     boost_po::options_description queryOpts("Query options");
     queryOpts.add_options()
             ("changelog,c",     pOpts["changelog"])
@@ -120,6 +143,7 @@ int main (int argc, char *argv[])
             ("search,s",        pOpts["search"])
             ("test,t",          pOpts["test"])
             ;
+    queryOpts.add(commonOpts);
     boost_po::options_description syncOpts("Sync options");
     syncOpts.add_options()
             ("clean,c",         pOpts["clean"])
@@ -132,10 +156,15 @@ int main (int argc, char *argv[])
             ("sysupgrade,u",    pOpts["sysupgrade"])
             ("downloadonly,w",  pOpts["downloadonly"])
             ("refresh,y",       pOpts["refresh"])
-            ("ignore",          pOpts["ignore"])
+            ("ignore", boost_po::value<std::string>(), pOpts["ignore"])
             ("nointegrity",     pOpts["nointegrity"])
             ;
+    syncOpts.add(addRemoveOpts);
     boost_po::options_description vercmpOpts("Version compare options");
+    vercmpOpts.add_options()
+            ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
+            ("help,h",          pOpts["help"])
+            ;
 
     boost_po::variables_map mainvm;
 
@@ -151,7 +180,7 @@ int main (int argc, char *argv[])
     boost_po::positional_options_description p;
     p.add("input", -1);
 
-    boost_po::parsed_options parsedMain = boost_po::command_line_parser(argc, argv).options(allOpts).positional(p).run();
+    boost_po::parsed_options parsedMain = boost_po::command_line_parser(argc, argv).options(mainOpts).positional(p).run();
 
     boost_po::store(parsedMain, mainvm);
 
