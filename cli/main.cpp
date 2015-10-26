@@ -3,61 +3,7 @@
 
 #include <iostream>
 
-#include <boost/program_options.hpp>
-namespace boost_po = boost::program_options;
-
-std::map<std::string, const char*> pOpts {{"help",          "produce a help message"},
-                                          {"version",       "output the version number"},
-                                          {"add",           "add fpm file"},
-                                          {"remove",        "remove package"},
-                                          {"upgrade",       "upgrade fpm file"},
-                                          {"freshen",       "feshen fpm file"},
-                                          {"query",         "query package"},
-                                          {"sync",          "sync"},
-                                          {"ps",            "ps"},
-                                          {"vercmp",        "compare versions"},
-                                          {"nodeps",        "skip dependency checks"},
-                                          {"force",         "force install, overwrite conflicting"},
-                                          {"noarch",        "install the package, even if it is for an other arch"},
-                                          {"input",         "input file"},
-                                          {"help",          "produce a help message"},
-                                          {"cascade",       "remove packages and all packages that depend on them"},
-                                          {"dbonly",        "only remove database entry, do not remove files"},
-                                          {"nosave",        "remove configuration files as well"},
-                                          {"recursive",     "remove dependencies also (that won't break packages)"},
-                                          {"freshen",       "only upgrade this package if it is already installed and at a lesser version"},
-                                          {"changelog",     "view the changelog of a package"},
-                                          {"nodeps",        "skip dependency checks"},
-                                          {"orphans",       "list all packages that were installed as a dependency \
-                                                               and are not required by any other packages"},
-                                          {"fsck",          "check the integrity of packages' files"},
-                                          {"groups",        "view all members of a package group"},
-                                          {"info",          "view package information"},
-                                          {"list",          "list the contents of the queried package"},
-                                          {"foreign",       "list all packages that were not found in the sync db(s)"},
-                                          {"owns",          "query the package that owns <file>"},
-                                          {"file",          "pacman-g2 will query the package file [package] instead of \
-                                                               looking in the database"},
-                                          {"search",        "search locally-installed packages for matching strings"},
-                                          {"test",          "search problems in the local database"},
-                                          {"clean",         "remove old packages from cache directory (use -cc for all)"},
-                                          {"dependsonly",   "install dependencies only"},
-                                          {"groups",        "view all members of a package group"},
-                                          {"print-uris",    "print out URIs for given packages and their dependencies"},
-                                          {"search",        "search remote repositories for matching strings"},
-                                          {"sysupgrade",    "upgrade all packages that are out of date"},
-                                          {"downloadonly",  "download packages but do not install/upgrade anything"},
-                                          {"refresh",       "download fresh package databases from the server"},
-                                          {"ignore",        "<pkg>  ignore a package upgrade (can be used more than once)"},
-                                          {"nointegrity",   "don't check the integrity of the packages using sha1"},
-                                          {"config",        "<path> set an alternate configuration file"},
-                                          {"noconfirm",     "do not ask for anything confirmation"},
-                                          {"ask",           "<number> pre-specify answers for questions (see manpage)"},
-                                          {"regex",         "treat targets as regexs if no package found"},
-                                          {"verbose",       "be verbose"},
-                                          {"root",          "<path>   set an alternate installation root"},
-                                          {"dbpath,b",      "<path> set an alternate database location"},
-                                          };
+#include "cliConfig.hpp"
 
 void printCliVersion()
 {
@@ -92,79 +38,7 @@ int main (int argc, char *argv[])
             ;
     addRemoveOpts.add(commonOpts);
 
-    boost_po::options_description mainOpts("Main options");
-    mainOpts.add_options()
-            ("help,h",          pOpts["help"])
-            ("version,V",       pOpts["version"])
-            ("add,A",           pOpts["add"])
-            ("remove,R",        pOpts["remove"])
-            ("upgrade,U",       pOpts["upgrade"])
-            ("freshen,F",       pOpts["freshen"])
-            ("query,Q",         pOpts["query"])
-            ("sync,S",          pOpts["sync"])
-            ("ps,P",            pOpts["ps"])
-            ("vercmp,Y",        pOpts["vercmp"])
-            ;
-    boost_po::options_description addOpts("Add options");
-    addOpts.add_options()
-            ("nodeps,d",        pOpts["nodeps"])
-            ("force,f",         pOpts["force"])
-            ("noarch",          pOpts["noarch"])
-            ;
-    addOpts.add(addRemoveOpts);
-    boost_po::options_description removeOpts("Remove options");
-    removeOpts.add_options()
-            ("cascade,c",       pOpts["cascade"])
-            ("nodeps,d",        pOpts["nodeps"])
-            ("dbonly,k",        pOpts["dbonly"])
-            ("nosave,n",        pOpts["nosave"])
-            ("recursive,s",     pOpts["recursive"])
-            ;
-    removeOpts.add(addRemoveOpts);
-    boost_po::options_description upgradeOpts("Upgrade options");
-    upgradeOpts.add_options()
-            ("nodeps,d",        pOpts["nodeps"])
-            ("force,f",         pOpts["force"])
-            ("freshen,e",       "only upgrade this package if it is already installed and at a lesser version")
-            ;
-    upgradeOpts.add(addRemoveOpts);
-    boost_po::options_description queryOpts("Query options");
-    queryOpts.add_options()
-            ("changelog,c",     pOpts["changelog"])
-            ("nodeps,d",        pOpts["nodeps"])
-            ("orphans,e",       pOpts["orphans"])
-            ("fsck,f",          pOpts["fsck"])
-            ("groups,g",        pOpts["groups"])
-            ("info,i",          pOpts["info"])
-            ("list,l",          pOpts["list"])
-            ("foreign,m",       pOpts["foreign"])
-            ("owns,o",          pOpts["owns"])
-            ("file,p",          pOpts["file"])
-            ("search,s",        pOpts["search"])
-            ("test,t",          pOpts["test"])
-            ;
-    queryOpts.add(commonOpts);
-    boost_po::options_description syncOpts("Sync options");
-    syncOpts.add_options()
-            ("clean,c",         pOpts["clean"])
-            ("nodeps,d",        pOpts["nodeps"])
-            ("dependsonly,e",   pOpts["dependsonly"])
-            ("force,f",         pOpts["force"])
-            ("groups,g",        pOpts["groups"])
-            ("print-uris,p",    pOpts["print-uris"])
-            ("search,s",        pOpts["search"])
-            ("sysupgrade,u",    pOpts["sysupgrade"])
-            ("downloadonly,w",  pOpts["downloadonly"])
-            ("refresh,y",       pOpts["refresh"])
-            ("ignore", boost_po::value<std::string>(), pOpts["ignore"])
-            ("nointegrity",     pOpts["nointegrity"])
-            ;
-    syncOpts.add(addRemoveOpts);
-    boost_po::options_description vercmpOpts("Version compare options");
-    vercmpOpts.add_options()
-            ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
-            ("help,h",          pOpts["help"])
-            ;
+
 
     boost_po::variables_map mainvm;
 
@@ -177,10 +51,13 @@ int main (int argc, char *argv[])
     //        std::cout << e.what() << "\n";
     //    }
 
-    boost_po::positional_options_description p;
-    p.add("input", -1);
+//    boost_po::positional_options_description p;
+//    p.add("input", -1);
+//    boost_po::command_line_parser(argc, argv).options(mainOpts).positional(p).run();
 
-    boost_po::parsed_options parsedMain = boost_po::command_line_parser(argc, argv).options(mainOpts).positional(p).run();
+    boost_po::parsed_options parsedMain = boost_po::command_line_parser(argc, argv).options(mainOpts).allow_unregistered().run();
+
+    std::vector<std::string> secondaryOpts = collect_unrecognized(parsedMain.options, boost_po::include_positional);
 
     boost_po::store(parsedMain, mainvm);
 
