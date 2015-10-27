@@ -1,5 +1,7 @@
 #include "cliConfig.hpp"
 
+#include <iostream>
+
 std::map<const std::string, const char*> CliConfig::pOpts =
 {{"help",          "produce a help message"},
  {"version",       "output the version number"},
@@ -54,7 +56,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
    {"dbpath",        "<path> set an alternate database location"},
   };
 
-  CliConfig::CliConfig() {
+  CliConfig::CliConfig( int argc, char *argv[] ) : pargc(argc) , pargv(argv) {
       commonOpts.add_options()
       ("config", boost_po::value<std::string>(), pOpts["config"])
       ("noconfirm",     pOpts["noconfirm"])
@@ -73,7 +75,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       addRemoveOpts.add(commonOpts);
 
       mainOpts.add_options()
-      ("help,h",          pOpts["help"])
+      ("help,H",          pOpts["help"])
       ("version,V",       pOpts["version"])
       ("add,A",           pOpts["add"])
       ("remove,R",        pOpts["remove"])
@@ -144,4 +146,95 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
       ("help,h",          pOpts["help"])
       ;
+  }
+
+  inline void CliConfig::secondaryProcess(boost_po::options_description optsToAdd, boost_po::variables_map& secondaryVM) {
+      mainOpts.add(addOpts);
+      boost_po::positional_options_description p;
+      p.add("input", -1);
+      try {
+          boost_po::store( boost_po::command_line_parser(pargc, pargv).options(mainOpts).positional(p).run(), secondaryVM );
+      }
+      catch(std::exception& e) {
+          std::cout << e.what() << std::endl;
+      }
+  }
+
+  P_OP CliConfig::getConfig(boost_po::variables_map& secondaryVM) {
+
+      //    try {
+
+      //    boost_po::store(boost_po::parse_command_line(argc, argv, mainopts), mainvm);
+
+      //    }
+      //    catch(std::exception& e) {
+      //        std::cout << e.what() << "\n";
+      //    }
+
+      //    boost_po::positional_options_description p;
+      //    p.add("input", -1);
+      //    boost_po::command_line_parser(argc, argv).options(mainOpts).positional(p).run();
+
+      boost_po::parsed_options parsedMain = boost_po::command_line_parser(pargc, pargv).options(mainOpts).allow_unregistered().run();
+
+      //    std::vector<std::string> secondaryOpts = collect_unrecognized(parsedMain.options, boost_po::include_positional);
+
+      boost::program_options::variables_map mainvm;
+      boost_po::store(parsedMain, mainvm);
+
+      if(mainvm.find("add") !=  mainvm.end()) {
+          std::cout<<"add chosen"<<std::endl;
+          secondaryProcess(addOpts ,secondaryVM);
+          return P_OP::OP_ADD;
+      }
+
+      if(mainvm.find("remove") != mainvm.end()) {
+          std::cout<<"remove chosen"<<std::endl;
+          secondaryProcess(removeOpts ,secondaryVM);
+          return P_OP::OP_REMOVE;
+      }
+
+      if(mainvm.find("upgrade") != mainvm.end()) {
+          std::cout<<"upgrade chosen"<<std::endl;
+          secondaryProcess(upgradeOpts ,secondaryVM);
+          return P_OP::OP_UPGRADE;
+      }
+
+      if(mainvm.find("freshen") != mainvm.end()) {
+          std::cout<<"freshen chosen"<<std::endl;
+          secondaryProcess(upgradeOpts ,secondaryVM);
+          return P_OP::OP_FRESHEN;
+      }
+
+      if(mainvm.find("query") != mainvm.end()) {
+          std::cout<<"query chosen"<<std::endl;
+          secondaryProcess(queryOpts ,secondaryVM);
+          return P_OP::OP_QUERY;
+      }
+      if(mainvm.find("sync") != mainvm.end()) {
+          std::cout<<"sync chosen"<<std::endl;
+          secondaryProcess(syncOpts ,secondaryVM);
+          return P_OP::OP_SYNC;
+      }
+
+      if(mainvm.find("ps") != mainvm.end()) {
+          std::cout<<"ps chosen"<<std::endl;
+          //secondaryProcess(psOpts ,secondaryVM);
+          return P_OP::OP_PS;
+      }
+
+      if(mainvm.count("vercmp")) {
+          std::cout<<"vercmp chosen"<<std::endl;
+          secondaryProcess(vercmpOpts ,secondaryVM);
+          return P_OP::OP_VERCMP;
+      }
+
+      if(mainvm.count("help") || pargc<=1) {
+          std::cout<<mainOpts;
+          return P_OP::OP_HELP;
+      }
+
+      if(mainvm.find("version") != mainvm.end()) {
+          return P_OP::OP_VERSION;
+      }
   }
