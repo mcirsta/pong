@@ -17,7 +17,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
  {"force",         "force install, overwrite conflicting"},
  {"noarch",        "install the package, even if it is for an other arch"},
  {"input",         "input file"},
- {"help",          "produce a help message"},
+ {"desc",          "produce a help message"},
  {"cascade",       "remove packages and all packages that depend on them"},
  {"dbonly",        "only remove database entry, do not remove files"},
  {"nosave",        "remove configuration files as well"},
@@ -66,7 +66,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       ("root,r",   boost_po::value<std::string>(), pOpts["root"])
       ("dbpath,b", boost_po::value<std::string>(), pOpts["dbpath"])
       ("input", boost_po::value< std::vector<std::string>>(), pOpts["input"])
-      ("help,h",          pOpts["help"])
+      ("desc,h",          pOpts["desc"])
       ;
       addRemoveOpts.add_options()
       ("noprogressbar", "do not show a progress bar when downloading files")
@@ -144,12 +144,12 @@ std::map<const std::string, const char*> CliConfig::pOpts =
 
       vercmpOpts.add_options()
       ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
-      ("help,h",          pOpts["help"])
+      ("desc,h",          pOpts["desc"])
       ;
   }
 
   inline void CliConfig::secondaryProcess(boost_po::options_description optsToAdd, boost_po::variables_map& secondaryVM) {
-      mainOpts.add(addOpts);
+      mainOpts.add(optsToAdd);
       boost_po::positional_options_description p;
       p.add("input", -1);
       try {
