@@ -54,6 +54,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
    {"verbose",       "be verbose"},
    {"root",          "<path>   set an alternate installation root"},
    {"dbpath",        "<path> set an alternate database location"},
+   {"arch",          "<arch name> set a different arch than native"},
   };
 
   CliConfig::CliConfig( int argc, char *argv[] ) : pargc(argc) , pargv(argv) {
@@ -65,6 +66,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       ("verbose,v",     pOpts["verbose"])
       ("root,r",   boost_po::value<std::string>(), pOpts["root"])
       ("dbpath,b", boost_po::value<std::string>(), pOpts["dbpath"])
+      ("arch",  boost_po::value<std::string>(), pOpts["arch"])
       ("input", boost_po::value< std::vector<std::string>>(), pOpts["input"])
       ("desc,h",          pOpts["desc"])
       ;
@@ -161,23 +163,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
   }
 
   P_OP CliConfig::getConfig(boost_po::variables_map& secondaryVM) {
-
-      //    try {
-
-      //    boost_po::store(boost_po::parse_command_line(argc, argv, mainopts), mainvm);
-
-      //    }
-      //    catch(std::exception& e) {
-      //        std::cout << e.what() << "\n";
-      //    }
-
-      //    boost_po::positional_options_description p;
-      //    p.add("input", -1);
-      //    boost_po::command_line_parser(argc, argv).options(mainOpts).positional(p).run();
-
       boost_po::parsed_options parsedMain = boost_po::command_line_parser(pargc, pargv).options(mainOpts).allow_unregistered().run();
-
-      //    std::vector<std::string> secondaryOpts = collect_unrecognized(parsedMain.options, boost_po::include_positional);
 
       boost::program_options::variables_map mainvm;
       boost_po::store(parsedMain, mainvm);
