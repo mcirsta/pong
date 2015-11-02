@@ -24,6 +24,8 @@ int main (int argc, char *argv[])
     boost::program_options::variables_map secondaryOpts;
     P_OP mainOption = cliConf.getConfig(secondaryOpts);
     bool opSucceded = true;
+    initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
+            secondaryOpts["dbpath"].as<std::string>());
     switch(mainOption) {
     case P_OP::OP_VERSION :         printCliVersion();  break;
     case P_OP::OP_ADD :             opSucceded = addPackages();  break;
