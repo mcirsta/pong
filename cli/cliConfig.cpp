@@ -59,14 +59,14 @@ std::map<const std::string, const char*> CliConfig::pOpts =
 
   CliConfig::CliConfig( int argc, char *argv[] ) : pargc(argc) , pargv(argv) {
       commonOpts.add_options()
-      ("config", boost_po::value<std::string>(), pOpts["config"])
+      ("config", boost_po::value<std::string>()->default_value(""), pOpts["config"])
       ("noconfirm",     pOpts["noconfirm"])
       ("ask",  boost_po::value<int>(), pOpts["ask"])
       ("regex",         pOpts["regex"])
       ("verbose,v",     pOpts["verbose"])
-      ("root,r",   boost_po::value<std::string>(), pOpts["root"])
-      ("dbpath,b", boost_po::value<std::string>(), pOpts["dbpath"])
-      ("arch",  boost_po::value<std::string>(), pOpts["arch"])
+      ("root,r",   boost_po::value<std::string>()->default_value(""), pOpts["root"])
+      ("dbpath,b", boost_po::value<std::string>()->default_value(""), pOpts["dbpath"])
+      ("arch",  boost_po::value<std::string>()->default_value(""), pOpts["arch"])
       ("input", boost_po::value< std::vector<std::string>>(), pOpts["input"])
       ("desc,h",          pOpts["desc"])
       ;

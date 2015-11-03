@@ -1,9 +1,10 @@
 #include "libConfig.hpp"
 #include "interface.hpp"
+#include "database.hpp"
 
 std::string libConfig::rootPath = "/";
 std::string libConfig::arch = "";
-std::string libConfig::dbpath = "var/lib/pacman-g2";
+std::string libConfig::dbpath = "/var/lib/pacman-g2";
 std::string libConfig::configFile = "../pong/etc/pong-lib.conf";
 
 bool initLib(std::string root, std::string config, std::string arch, std::string DB) {
@@ -28,4 +29,5 @@ bool initLib(std::string root, std::string config, std::string arch, std::string
     if(DB != "") {
         libConfig::dbpath = DB;
     }
+    initDB(libConfig::dbpath);
 }
