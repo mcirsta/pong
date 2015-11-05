@@ -3,6 +3,10 @@
 
 #include "stdio.h"
 
+bool extractOldDB(FILE *dbFile) {
+    extractXZ(dbFile, "/tmp/pongTemp/");
+}
+
 bool openLegacyDB(std::string dbpath) {
     std::string dbName = dbpath + "/" + "frugalware-current.fdb";
     FILE *dbFile = fopen( dbName.c_str(), "r");
@@ -11,6 +15,7 @@ bool openLegacyDB(std::string dbpath) {
         return false;
     }
     std::cout<<"looks good, opening: "<<dbName<<std::endl;
+    extractOldDB(dbFile);
     fclose(dbFile);
     return true;
 }
