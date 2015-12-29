@@ -63,7 +63,7 @@ bool extractXZ(FILE *sfp, std::string dest)
     archive_write_disk_set_standard_lookup(ext);
     if ((r = archive_read_open_FILE(a, sfp))) {
       std::cout<<archive_error_string(ext)<<std::endl;
-      exit(1);
+      return false;
     }
     for (;;) {
       r = archive_read_next_header(a, &entry);
@@ -71,8 +71,10 @@ bool extractXZ(FILE *sfp, std::string dest)
         break;
       if (r < ARCHIVE_OK)
         fprintf(stderr, "%s\n", archive_error_string(a));
-      if (r < ARCHIVE_WARN)
-        exit(1);
+      if (r < ARCHIVE_WARN) {
+          fprintf(stderr, "warn 1\n");
+          return false;
+      }
       std::string path = archive_entry_pathname(entry);
       //std::cout<<"old path: "<< path<<std::endl;
       archive_entry_set_pathname(entry, (dest + "/" + path).c_str());
@@ -83,18 +85,22 @@ bool extractXZ(FILE *sfp, std::string dest)
         r = copy_data(a, ext);
         if (r < ARCHIVE_OK)
           fprintf(stderr, "%s\n", archive_error_string(ext));
-        if (r < ARCHIVE_WARN)
-          exit(1);
+        if (r < ARCHIVE_WARN) {
+            fprintf(stderr, "warn 2\n");
+            return false;
+        }
       }
       r = archive_write_finish_entry(ext);
       if (r < ARCHIVE_OK)
         fprintf(stderr, "%s\n", archive_error_string(ext));
-      if (r < ARCHIVE_WARN)
-        exit(1);
+      if (r < ARCHIVE_WARN) {
+          fprintf(stderr, "warn 3\n");
+          return false;
+      }
     }
     archive_read_close(a);
     archive_read_free(a);
     archive_write_close(ext);
     archive_write_free(ext);
-    exit(0);
+    return true;
 }
