@@ -6,13 +6,14 @@
 #include <sqlite3.h>
 
 bool initDB(const std::string &dbpath);
+bool closeDB();
 bool openLegacyDB(const std::string &dbpath);
 bool extractOldDB(FILE *dbFile);
-bool createNewDB(const std::string &dbpath);
+bool createNewDB();
 bool importData(const std::string &dbpath);
 
 struct pkgData {
-    std::string str, name, desc, version, sha1sum;
+    std::string str, name, desc, version, sha1sum, arch, group;
     unsigned long long csize=0,usize=0;
 };
 
