@@ -9,6 +9,14 @@
 
 sqlite3 *globalDB::DBHandle = nullptr;
 
+//muti-char because search will be in the order of the init here
+std::vector<std::pair<pRel,std::string>> dSigns = { {pRel::MORE_EQ, ">="},
+                                                    {pRel::LESS_EQ, "<="},
+                                                    {pRel::EQ, "="},
+                                                    {pRel::MORE, ">"},
+                                                    {pRel::LESS, "<"},
+                                                  };
+
 void globalDB::setDBHandle(sqlite3 * dbH) {
     DBHandle = dbH;
 }
@@ -195,11 +203,83 @@ bool setPkgData(const pkgData &pData) {
     r = sqlite3_finalize(sqlStmt);
 }
 
-int importGeneral(const std::string &dbFile) {
+bool importGeneral(const std::string &dbFile) {
     pkgData pData;
     getPkgData(dbFile,pData);
     setPkgData(pData);
+    return true;
 }
+
+pkgDep buildDep(const std::string &str) {
+    pkgDep pDep;
+    bool depRelFound = false;
+    for(const auto &x : dSigns) {
+        size_t pos = str.find(x.second);
+        if(pos != std::string::npos) {
+            pDep.depVer = str.substr(pos + x.second.size());
+            pDep.depName = str.substr(0, pos);
+            pDep.depRel = x.first;
+            depRelFound = true;
+            break;
+        }
+    }
+    if( !depRelFound ) {
+        pDep.depVer = "";
+        pDep.depName = str;
+        pDep.depRel = pRel::NONE;
+    }
+    return pDep;
+}
+
+bool getDepData(const std::string &dbFile, pkgDeps &pDeps, pkgReplaces pReplaces, pkgConflicts pConflicts, \
+                pkGProvides pProvides) {
+    std::ifstream file(dbFile);
+    std::string str;
+    while (std::getline(file, str))
+    {
+        if(str.size()<1) {
+            continue;
+        }
+        if(str=="%DEPENDS%") {
+            std::getline(file, str);
+            do {
+                pDeps.push_back(buildDep(str));
+                std::getline(file, str);
+            } while(str.size()>=1);
+        }
+        else
+            if(str=="%REPLACES%") {
+                while(str.size()>=1) {
+                    std::getline(file, str);
+                    pReplaces.push_back(str);
+                }
+            }
+            else
+                if(str=="%CONFLICTS%") {
+                    while(str.size()>=1) {
+                        std::getline(file, str);
+                        pConflicts.push_back(str);
+                    }
+                }
+                else
+                    if(str=="%PROVIDES%") {
+                        while(str.size()>=1) {
+                            std::getline(file, str);
+                            pProvides.push_back(str);
+                        }
+                    }
+    }
+}
+
+bool importDeps(const std::string &dbFile, const char *pName) {
+    pkgDeps pDeps;
+    pkgReplaces pReplaces;
+    pkgConflicts pConflicts;
+    pkGProvides pProvides;
+    getDepData(dbFile, pDeps, pReplaces, pConflicts, pProvides);
+    return true;
+}
+
 
 bool importData(const std::string &dbpath) {
     DIR           *d;
@@ -212,9 +292,18 @@ bool importData(const std::string &dbpath) {
             if(dir->d_type == DT_DIR && strcmp(dir->d_name,".") && strcmp(dir->d_name,".."))
             {
                 std::string fileDb = dbpath + "/" +dir->d_name + "/" + "desc";
-                std::string depsDb = dbpath + "/" +dir->d_name + "/" + "depends";
                 importGeneral(fileDb);
                 std::remove(fileDb.c_str());
+            }
+        }
+        //now add deps
+        rewinddir(d);
+        while ((dir = readdir(d)) != NULL)
+        {
+            if(dir->d_type == DT_DIR && strcmp(dir->d_name,".") && strcmp(dir->d_name,".."))
+            {
+                std::string depsDb = dbpath + "/" +dir->d_name + "/" + "depends";
+                importDeps(depsDb, dir->d_name);
                 std::remove(depsDb.c_str());
                 int r = rmdir((dbpath + "/" +dir->d_name).c_str());
             }

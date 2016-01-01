@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <sqlite3.h>
+#include <vector>
 
 bool initDB(const std::string &dbpath);
 bool closeDB();
@@ -16,6 +17,24 @@ struct pkgData {
     std::string str, name, desc, version, sha1sum, arch, group;
     unsigned long long csize=0,usize=0;
 };
+
+enum class pRel { NONE,
+       LESS,
+       LESS_EQ,
+       EQ,
+       MORE,
+       MORE_EQ,
+     };
+
+struct pkgDep {
+    std::string depName, depVer;
+    pRel depRel;
+};
+
+typedef std::vector<pkgDep> pkgDeps;
+typedef std::vector<std::string> pkgReplaces;
+typedef std::vector<std::string> pkgConflicts;
+typedef std::vector<std::string> pkGProvides;
 
 class globalDB {
 public:
