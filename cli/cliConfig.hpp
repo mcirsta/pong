@@ -17,6 +17,7 @@ enum class P_OP {    OP_UNKNOWN,
                      OP_REMOVE,
                      OP_QUERY,
                      OP_SYNC,
+                     OP_DATABASE,
                      OP_PS,
                      OP_VERCMP,
                 };
@@ -33,6 +34,7 @@ class CliConfig {
     boost_po::options_description upgradeOpts {"Upgrade options"};
     boost_po::options_description queryOpts {"Query options"};
     boost_po::options_description syncOpts {"Sync options"};
+    boost_po::options_description databaseOpts {"Database options"};
     boost_po::options_description vercmpOpts {"Version compare options"};
     inline void secondaryProcess(boost_po::options_description optsToAdd, boost_po::variables_map& secondaryVM);
 

@@ -5,6 +5,7 @@
 
 #include "cliConfig.hpp"
 #include "lib/interface.hpp"
+#include "dispatcher.hpp"
 
 void printCliVersion()
 {
@@ -37,6 +38,7 @@ int main (int argc, char *argv[])
     initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
             secondaryOpts["dbpath"].as<std::string>());
     switch(mainOption) {
-    case P_OP::OP_ADD :             opSucceded = addPackages();  break;
+    case P_OP::OP_ADD :             opSucceded = addPackages();                        break;
+    case P_OP::OP_DATABASE :        opSucceded = databaseDispatcher(secondaryOpts);    break;
     }
 }

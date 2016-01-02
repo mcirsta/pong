@@ -17,6 +17,9 @@ std::vector<std::pair<pRel,std::string>> dSigns = { {pRel::MORE_EQ, ">="},
                                                     {pRel::LESS, "<"},
                                                   };
 
+std::vector<packageRelData> pkgRelData;
+
+
 void globalDB::setDBHandle(sqlite3 * dbH) {
     DBHandle = dbH;
 }
@@ -108,6 +111,99 @@ bool createArchs(const std::string &archFile) {
     return true;
 }
 
+bool createRelationsTable() {
+    const char *createRelTableStr = "CREATE TABLE depRels ( " \
+                                    "relID INT PRIMARY KEY, " \
+                                    "relSign TEXT UNIQUE NOT NULL); ";
+    sqlite3_stmt *sqlStmt;
+    int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createRelTableStr, -1, &sqlStmt, nullptr);
+    r = sqlite3_step(sqlStmt);
+    r = sqlite3_finalize(sqlStmt);
+    const char *addGroupSql = "INSERT INTO depRels (relID, relSign) VALUES (?, ?);";
+    for(const auto &x : dSigns) {
+        {
+            r = sqlite3_prepare_v2(globalDB::getDBHandle(), addGroupSql, -1, &sqlStmt, nullptr);
+            r = sqlite3_bind_int(sqlStmt, 1, static_cast<int>(x.first));
+            r = sqlite3_bind_text(sqlStmt, 2, x.second.c_str(), x.second.size(), SQLITE_STATIC);
+            r = sqlite3_step(sqlStmt);
+            r = sqlite3_finalize(sqlStmt);
+        }
+    }
+    return true;
+}
+
+bool createProvidesTable() {
+    const char *createProvidesTableStr = "CREATE TABLE provides ( " \
+                                    "newPkgID INT, " \
+                                    "providedPkg TEXT NOT NULL); ";
+    sqlite3_stmt *sqlStmt;
+    int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createProvidesTableStr, -1, &sqlStmt, nullptr);
+    r = sqlite3_step(sqlStmt);
+    r = sqlite3_finalize(sqlStmt);
+    return true;
+}
+
+bool setProvidesData(const packageRelData &pRelData) {
+    const char *addGroupSql = "INSERT INTO provides (newPkgID, providedPkg) " \
+                              "VALUES ( (SELECT rowid FROM packages WHERE name=? )," \
+                                         "?);";
+    int r = 0;
+    sqlite3_stmt *sqlStmt;
+    for(const auto &x : pRelData.pProvides) {
+        {
+            r = sqlite3_prepare_v2(globalDB::getDBHandle(), addGroupSql, -1, &sqlStmt, nullptr);
+            r = sqlite3_bind_text(sqlStmt, 1, pRelData.pkgName.c_str(), pRelData.pkgName.size(), SQLITE_STATIC);;
+            r = sqlite3_bind_text(sqlStmt, 2, x.c_str(), x.size(), SQLITE_STATIC);
+            r = sqlite3_step(sqlStmt);
+            if(r != SQLITE_DONE) {
+                std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<< pRelData.pkgName<<" - "<<x<<std::endl;
+            }
+            r = sqlite3_finalize(sqlStmt);
+        }
+    }
+}
+
+bool createDepsTable() {
+    const char *createDepTableStr = "CREATE TABLE deps ( " \
+                                    "packageID INT NOT NULL, " \
+                                    "dependID INT NOT NULL,"
+                                    "dependRel INT NOT NULL,"
+                                    "dependVersion TEXT ); ";
+    sqlite3_stmt *sqlStmt;
+    int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createDepTableStr, -1, &sqlStmt, nullptr);
+    r = sqlite3_step(sqlStmt);
+    r = sqlite3_finalize(sqlStmt);
+    return true;
+}
+
+bool setDepData(const packageRelData &pRelData) {
+    const char *addDepSql = "INSERT INTO deps (packageID, dependID, dependRel, dependVersion) " \
+                              "VALUES ( (SELECT rowid FROM packages WHERE name=?1 ), " \
+                              "(CASE ifnull((SELECT rowid FROM packages WHERE name=?2), 0) " \
+                              "WHEN  0 " \
+                              "THEN (SELECT newPkgID FROM provides WHERE providedPkg=?2) " \
+                              "ELSE (SELECT rowid FROM packages WHERE name=?2) " \
+                              "END ), "\
+                              " ?3, ?4);";
+    int r = 0;
+    sqlite3_stmt *sqlStmt;
+    for(const auto &x : pRelData.pDeps) {
+        {
+            r = sqlite3_prepare_v2(globalDB::getDBHandle(), addDepSql, -1, &sqlStmt, nullptr);
+            r = sqlite3_bind_text(sqlStmt, 1, pRelData.pkgName.c_str(), pRelData.pkgName.size(), SQLITE_STATIC);
+            r = sqlite3_bind_text(sqlStmt, 2, x.depName.c_str(), x.depName.size(), SQLITE_STATIC);;
+            r = sqlite3_bind_int(sqlStmt, 3, static_cast<int>(x.depRel));
+            r = sqlite3_bind_text(sqlStmt, 4, x.depVer.c_str(), x.depVer.size(), SQLITE_STATIC);
+            r = sqlite3_step(sqlStmt);
+            if(r != SQLITE_DONE) {
+                //OK so couldn't find the needed dep
+                std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<< pRelData.pkgName<<" - "<<x.depName<<std::endl;
+            }
+            r = sqlite3_finalize(sqlStmt);
+        }
+    }
+}
+
 bool createNewDB() {
 
     sqlite3_stmt *sqlStmt;
@@ -136,6 +232,9 @@ bool createNewDB() {
     r = sqlite3_finalize(sqlStmt);
     createGroups("/home/marius/groups.txt");
     createArchs("/home/marius/archs.txt");
+    createRelationsTable();
+    createProvidesTable();
+    createDepsTable();
     return true;
 }
 
@@ -203,10 +302,11 @@ bool setPkgData(const pkgData &pData) {
     r = sqlite3_finalize(sqlStmt);
 }
 
-bool importGeneral(const std::string &dbFile) {
+bool importGeneral(const std::string &dbFile, std::string &addPname) {
     pkgData pData;
     getPkgData(dbFile,pData);
     setPkgData(pData);
+    addPname = pData.name;
     return true;
 }
 
@@ -231,8 +331,7 @@ pkgDep buildDep(const std::string &str) {
     return pDep;
 }
 
-bool getDepData(const std::string &dbFile, pkgDeps &pDeps, pkgReplaces pReplaces, pkgConflicts pConflicts, \
-                pkGProvides pProvides) {
+bool getDepData(const std::string &dbFile, packageRelData &pRelData) {
     std::ifstream file(dbFile);
     std::string str;
     while (std::getline(file, str))
@@ -241,42 +340,53 @@ bool getDepData(const std::string &dbFile, pkgDeps &pDeps, pkgReplaces pReplaces
             continue;
         }
         if(str=="%DEPENDS%") {
-            std::getline(file, str);
-            do {
-                pDeps.push_back(buildDep(str));
-                std::getline(file, str);
-            } while(str.size()>=1);
+            while(std::getline(file, str))
+            {
+                if(str.size()<1) {
+                    break;
+                }
+                pRelData.pDeps.push_back(buildDep(str));
+            }
         }
         else
             if(str=="%REPLACES%") {
-                while(str.size()>=1) {
-                    std::getline(file, str);
-                    pReplaces.push_back(str);
+                while(std::getline(file, str))
+                {
+                    if(str.size()<1) {
+                        break;
+                    }
+                    pRelData.pReplaces.push_back(str);
                 }
             }
             else
                 if(str=="%CONFLICTS%") {
-                    while(str.size()>=1) {
-                        std::getline(file, str);
-                        pConflicts.push_back(str);
+                    while(std::getline(file, str))
+                    {
+                        if(str.size()<1) {
+                            break;
+                        }
+                        pRelData.pConflicts.push_back(str);
                     }
                 }
                 else
                     if(str=="%PROVIDES%") {
-                        while(str.size()>=1) {
-                            std::getline(file, str);
-                            pProvides.push_back(str);
+                        while(std::getline(file, str))
+                        {
+                            if(str.size()<1) {
+                                break;
+                            }
+                            pRelData.pProvides.push_back(str);
                         }
                     }
     }
 }
 
-bool importDeps(const std::string &dbFile, const char *pName) {
+bool importDeps(const std::string &dbFile, const std::string &pName) {
     pkgDeps pDeps;
-    pkgReplaces pReplaces;
-    pkgConflicts pConflicts;
-    pkGProvides pProvides;
-    getDepData(dbFile, pDeps, pReplaces, pConflicts, pProvides);
+    packageRelData pRelData;
+    getDepData(dbFile, pRelData);
+    pRelData.pkgName = pName;
+    pkgRelData.push_back(pRelData);
     return true;
 }
 
@@ -292,23 +402,22 @@ bool importData(const std::string &dbpath) {
             if(dir->d_type == DT_DIR && strcmp(dir->d_name,".") && strcmp(dir->d_name,".."))
             {
                 std::string fileDb = dbpath + "/" +dir->d_name + "/" + "desc";
-                importGeneral(fileDb);
-                std::remove(fileDb.c_str());
-            }
-        }
-        //now add deps
-        rewinddir(d);
-        while ((dir = readdir(d)) != NULL)
-        {
-            if(dir->d_type == DT_DIR && strcmp(dir->d_name,".") && strcmp(dir->d_name,".."))
-            {
                 std::string depsDb = dbpath + "/" +dir->d_name + "/" + "depends";
-                importDeps(depsDb, dir->d_name);
+                std::string addedPkgName;
+                importGeneral(fileDb, addedPkgName);
+                std::remove(fileDb.c_str());
+                importDeps(depsDb, addedPkgName);
                 std::remove(depsDb.c_str());
                 int r = rmdir((dbpath + "/" +dir->d_name).c_str());
             }
         }
         closedir(d);
+    }
+    for(const auto &x : pkgRelData) {
+        setProvidesData(x);
+    }
+    for(const auto &x : pkgRelData) {
+        setDepData(x);
     }
 }
 

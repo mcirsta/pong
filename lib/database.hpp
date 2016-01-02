@@ -18,12 +18,13 @@ struct pkgData {
     unsigned long long csize=0,usize=0;
 };
 
-enum class pRel { NONE,
+enum class pRel { NONE = 1,
        LESS,
        LESS_EQ,
        EQ,
        MORE,
        MORE_EQ,
+       MAX,
      };
 
 struct pkgDep {
@@ -34,7 +35,15 @@ struct pkgDep {
 typedef std::vector<pkgDep> pkgDeps;
 typedef std::vector<std::string> pkgReplaces;
 typedef std::vector<std::string> pkgConflicts;
-typedef std::vector<std::string> pkGProvides;
+typedef std::vector<std::string> pkgProvides;
+
+struct packageRelData {
+    std::string pkgName;
+    pkgDeps pDeps;
+    pkgReplaces pReplaces;
+    pkgConflicts pConflicts;
+    pkgProvides pProvides;
+};
 
 class globalDB {
 public:

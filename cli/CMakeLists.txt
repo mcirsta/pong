@@ -1,10 +1,12 @@
 set(CLI_SOURCES
         cliConfig.cpp
+        dispatcher.cpp
 	main.cpp
 )
 
 set(CLI_HEADERS
         cliConfig.hpp
+        dispatcher.hpp
 )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -std=c++11")

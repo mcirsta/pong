@@ -11,6 +11,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
  {"freshen",       "feshen fpm file"},
  {"query",         "query package"},
  {"sync",          "sync"},
+ {"database",      "database operations"},
  {"ps",            "ps"},
  {"vercmp",        "compare versions"},
  {"nodeps",        "skip dependency checks"},
@@ -55,6 +56,10 @@ std::map<const std::string, const char*> CliConfig::pOpts =
    {"root",          "<path>   set an alternate installation root"},
    {"dbpath",        "<path> set an alternate database location"},
    {"arch",          "<arch name> set a different arch than native"},
+   {"rebuilddeps",   "<pkg name> packages that have to be rebuilt ( have <,<=,=,> or >= on this package"},
+   {"alldeps",       "<pkg name> all deps that this package has"},
+   {"revdeps",       "<pkg name> packages that depend on this package"},
+   {"directdeps",    "<pkg name> just the direct depends specified by this package"}
   };
 
   CliConfig::CliConfig( int argc, char *argv[] ) : pargc(argc) , pargv(argv) {
@@ -85,6 +90,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       ("freshen,F",       pOpts["freshen"])
       ("query,Q",         pOpts["query"])
       ("sync,S",          pOpts["sync"])
+      ("database,D",      pOpts["database"])
       ("ps,P",            pOpts["ps"])
       ("vercmp,Y",        pOpts["vercmp"])
       ;
@@ -144,6 +150,13 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       ;
       syncOpts.add(addRemoveOpts);
 
+      databaseOpts.add_options()
+      ("rebuilddeps",  boost_po::value<std::string>(),   pOpts["rebuilddeps"])
+      ("alldeps",      boost_po::value<std::string>(),   pOpts["alldeps"])
+      ("revdeps",      boost_po::value<std::string>(),   pOpts["revdeps"])
+      ("directdeps",   boost_po::value<std::string>(),   pOpts["directdeps"])
+      ;
+
       vercmpOpts.add_options()
       ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])
       ("desc,h",          pOpts["desc"])
@@ -201,6 +214,12 @@ std::map<const std::string, const char*> CliConfig::pOpts =
           std::cout<<"sync chosen"<<std::endl;
           secondaryProcess(syncOpts ,secondaryVM);
           return P_OP::OP_SYNC;
+      }
+
+      if(mainvm.find("database") != mainvm.end()) {
+          std::cout<<"database chosen"<<std::endl;
+          secondaryProcess(databaseOpts ,secondaryVM);
+          return P_OP::OP_DATABASE;
       }
 
       if(mainvm.find("ps") != mainvm.end()) {
