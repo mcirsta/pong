@@ -62,6 +62,8 @@ std::map<const std::string, const char*> CliConfig::pOpts =
    {"directdeps",    "<pkg name> just the direct depends specified by this package"}
   };
 
+/* !!! When adding now opt groups (boost_po::options_description) always add the common opts to them  */
+
   CliConfig::CliConfig( int argc, char *argv[] ) : pargc(argc) , pargv(argv) {
       commonOpts.add_options()
       ("config", boost_po::value<std::string>()->default_value(""), pOpts["config"])
@@ -156,6 +158,8 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       ("revdeps",      boost_po::value<std::string>(),   pOpts["revdeps"])
       ("directdeps",   boost_po::value<std::string>(),   pOpts["directdeps"])
       ;
+
+      databaseOpts.add(commonOpts);
 
       vercmpOpts.add_options()
       ("input", boost_po::value< std::vector<std::string> >(), pOpts["input"])

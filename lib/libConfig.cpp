@@ -30,5 +30,9 @@ bool initLib(std::string root, std::string config, std::string arch, std::string
         libConfig::dbpath = DB;
     }
     initDB(libConfig::dbpath);
+}
+
+bool dbClean() {
     closeDB();
+    return true;
 }

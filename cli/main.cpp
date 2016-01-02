@@ -37,8 +37,12 @@ int main (int argc, char *argv[])
     //we need to init the database for these options
     initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
             secondaryOpts["dbpath"].as<std::string>());
+    std::string libRet;
     switch(mainOption) {
     case P_OP::OP_ADD :             opSucceded = addPackages();                        break;
-    case P_OP::OP_DATABASE :        opSucceded = databaseDispatcher(secondaryOpts);    break;
+    case P_OP::OP_DATABASE :        libRet = databaseDispatcher(secondaryOpts);
+                                    std::cout<<"pong says: "<<libRet<<std::endl;
+                                    break;
     }
+    dbClean();
 }

@@ -3,6 +3,7 @@ set(PLIB_SOURCES
         libConfig.cpp
         database.cpp
         utils.cpp
+        dbQueries.cpp
 )
 
 set(PLIB_HEADERS

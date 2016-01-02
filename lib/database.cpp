@@ -33,14 +33,15 @@ bool extractOldDB(FILE *dbFile) {
 }
 
 bool dbUpdateNeeded(const std::string &dbpath) {
-    //we always update the DB for now
-    std::string dbName = dbpath + "/" + "frugalware-current.pdb";
-    std::ifstream newDB(dbName);
-    if (newDB.good())
-    {
-        std::remove(dbName.c_str());
-    }
-    return true;
+//    //we always update the DB for now
+//    std::string dbName = dbpath + "/" + "frugalware-current.pdb";
+//    std::ifstream newDB(dbName);
+//    if (newDB.good())
+//    {
+//        std::remove(dbName.c_str());
+//    }
+//    return true;
+    return false;
 }
 
 bool openLegacyDB(const std::string &dbpath) {
