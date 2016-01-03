@@ -12,7 +12,7 @@ enum class DBOpts {
 
 bool addPackages();
 
-const char* dbQuery(DBOpts opType, const char* opArg);
+bool dbQuery(DBOpts opType, const char* opArg, std::string &retStr);
 
 bool initLib(std::string rootPath, std::string config, std::string arch, std::string DB);
 

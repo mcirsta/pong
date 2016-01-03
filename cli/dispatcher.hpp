@@ -6,6 +6,6 @@
 #include "../lib/interface.hpp"
 
 
-const char* databaseDispatcher(const  boost::program_options::variables_map &secondaryOpts);
+bool databaseDispatcher(const  boost::program_options::variables_map &secondaryOpts, std::string &retStr);
 
 #endif
