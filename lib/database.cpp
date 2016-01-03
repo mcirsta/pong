@@ -33,15 +33,15 @@ bool extractOldDB(FILE *dbFile) {
 }
 
 bool dbUpdateNeeded(const std::string &dbpath) {
-//    //we always update the DB for now
-//    std::string dbName = dbpath + "/" + "frugalware-current.pdb";
-//    std::ifstream newDB(dbName);
-//    if (newDB.good())
-//    {
-//        std::remove(dbName.c_str());
-//    }
-//    return true;
-    return false;
+    //we always update the DB for now
+    std::string dbName = dbpath + "/" + "frugalware-current.pdb";
+    std::ifstream newDB(dbName);
+    if (newDB.good())
+    {
+        std::remove(dbName.c_str());
+    }
+    return true;
+//    return false;
 }
 
 bool openLegacyDB(const std::string &dbpath) {
@@ -88,6 +88,9 @@ bool createGroups(const std::string &grFile) {
             r = sqlite3_finalize(sqlStmt);
         }
     }
+    else {
+        std::cout<<"could not find groups file, "<<grFile<<std::endl;
+    }
     return true;
 }
 
@@ -108,6 +111,9 @@ bool createArchs(const std::string &archFile) {
             r = sqlite3_step(sqlStmt);
             r = sqlite3_finalize(sqlStmt);
         }
+    }
+    else {
+        std::cout<<"could not find archs file, "<<archFile<<std::endl;
     }
     return true;
 }
@@ -231,8 +237,8 @@ bool createNewDB() {
         return false;
     }
     r = sqlite3_finalize(sqlStmt);
-    createGroups("/home/marius/groups.txt");
-    createArchs("/home/marius/archs.txt");
+    createGroups("./groups.txt");
+    createArchs("./archs.txt");
     createRelationsTable();
     createProvidesTable();
     createDepsTable();
