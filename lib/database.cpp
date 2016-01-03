@@ -299,7 +299,7 @@ bool setPkgData(const pkgData &pData) {
     r = sqlite3_bind_text(sqlStmt,3,pData.version.c_str(),pData.version.size(),SQLITE_STATIC);
     r = sqlite3_bind_int(sqlStmt,4,pData.csize);
     r = sqlite3_bind_int(sqlStmt,5,pData.usize);
-    r = sqlite3_bind_text(sqlStmt,6,pData.sha1sum.c_str(),pData.desc.size(),SQLITE_STATIC);
+    r = sqlite3_bind_text(sqlStmt,6,pData.sha1sum.c_str(),pData.sha1sum.size(),SQLITE_STATIC);
     r = sqlite3_bind_text(sqlStmt,7,pData.arch.c_str(),pData.arch.size(),SQLITE_STATIC);
     r = sqlite3_bind_text(sqlStmt,8,pData.group.c_str(),pData.group.size(),SQLITE_STATIC);
     r = sqlite3_step(sqlStmt);
