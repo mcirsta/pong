@@ -237,8 +237,8 @@ bool createNewDB() {
         return false;
     }
     r = sqlite3_finalize(sqlStmt);
-    createGroups("./groups.txt");
-    createArchs("./archs.txt");
+    createGroups("groups.txt");
+    createArchs("archs.txt");
     createRelationsTable();
     createProvidesTable();
     createDepsTable();
@@ -304,7 +304,7 @@ bool setPkgData(const pkgData &pData) {
     r = sqlite3_bind_text(sqlStmt,8,pData.group.c_str(),pData.group.size(),SQLITE_STATIC);
     r = sqlite3_step(sqlStmt);
     if(r != SQLITE_DONE) {
-        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<<pData.name<<" a= "<<pData.arch<<std::endl;
+        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " package: "<<pData.name<<std::endl;
     }
     r = sqlite3_finalize(sqlStmt);
 }
