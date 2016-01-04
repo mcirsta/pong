@@ -21,7 +21,22 @@ int getPkgID(const char *pkgName) {
 }
 
 bool allDepsQuery(int pkgID, std::string &retStr) {
-    return false;
+    sqlite3_stmt *sqlStmt;
+    const char *getAllDepsStr= "WITH RECURSIVE " \
+                               "alldeps(n) AS ( " \
+                               "SELECT deps.dependID FROM deps WHERE deps.packageID=? " \
+                               "UNION " \
+                               "SELECT deps.dependID FROM deps,alldeps WHERE deps.packageID=alldeps.n ) " \
+                               "SELECT name from alldeps JOIN packages ON packages.rowid=n ORDER BY name; ";
+    int r = sqlite3_prepare_v2(globalDB::getDBHandle(), getAllDepsStr, -1, &sqlStmt, nullptr);
+    sqlite3_bind_int(sqlStmt, 1, pkgID);
+    while(sqlite3_step(sqlStmt) == SQLITE_ROW) {
+        const unsigned char* dep = sqlite3_column_text(sqlStmt, 0);
+        retStr += (const char *)dep;
+        retStr += " ";
+    }
+    r = sqlite3_finalize(sqlStmt);
+    return true;
 }
 
 bool directDepsQuery(int pkgID, std::string &retStr) {
