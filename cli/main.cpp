@@ -1,5 +1,3 @@
-#define PACKAGE_VERSION 0.1
-#define PM_VERSION      0.1
 
 #include <iostream>
 
@@ -9,6 +7,8 @@
 
 void printCliVersion()
 {
+    const float PACKAGE_VERSION = 0.1;
+    const float PM_VERSION = 0.1;
     std::cout<<std::endl;
     std::cout<<"              |    Pong v"<<PACKAGE_VERSION<<" - libpong v"<< PM_VERSION<<std::endl;
     std::cout<<"                   Copyright (C) 2015 Marius Cirsta\n";
