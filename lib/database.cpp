@@ -29,7 +29,7 @@ sqlite3 *globalDB::getDBHandle() {
 }
 
 bool extractOldDB(FILE *dbFile) {
-    extractXZ(dbFile, "/tmp/pongTemp/");
+   return extractXZ(dbFile, "/tmp/pongTemp/");
 }
 
 bool dbUpdateNeeded(const std::string &dbpath) {
@@ -77,6 +77,9 @@ bool createGroups(const std::string &grFile) {
     const char *createGroupsTableStr = "CREATE TABLE pgroups ( " \
                                        " gname TEXT UNIQUE NOT NULL ); ";
     int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createGroupsTableStr, -1, &sqlStmt, nullptr);
+    if(r != SQLITE_OK) {
+        std::cout<<"error";
+    }
     r = sqlite3_step(sqlStmt);
     r = sqlite3_finalize(sqlStmt);
     const char *addGroupSql = "INSERT INTO pgroups (gname) VALUES (?);";
@@ -101,6 +104,9 @@ bool createArchs(const std::string &archFile) {
     const char *createArchTableStr = "CREATE TABLE archs ( " \
                                      " aname TEXT UNIQUE NOT NULL ); ";
     int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createArchTableStr, -1, &sqlStmt, nullptr);
+    if(r != SQLITE_OK) {
+        std::cout<<"error";
+    }
     r = sqlite3_step(sqlStmt);
     r = sqlite3_finalize(sqlStmt);
     const char *addGroupSql = "INSERT INTO archs (aname) VALUES (?);";
@@ -124,6 +130,9 @@ bool createRelationsTable() {
                                     "relSign TEXT UNIQUE NOT NULL); ";
     sqlite3_stmt *sqlStmt;
     int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createRelTableStr, -1, &sqlStmt, nullptr);
+    if(r != SQLITE_OK) {
+        std::cout<<"error";
+    }
     r = sqlite3_step(sqlStmt);
     r = sqlite3_finalize(sqlStmt);
     const char *addGroupSql = "INSERT INTO depRels (relID, relSign) VALUES (?, ?);";
@@ -145,6 +154,9 @@ bool createProvidesTable() {
                                     "providedPkg TEXT NOT NULL); ";
     sqlite3_stmt *sqlStmt;
     int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createProvidesTableStr, -1, &sqlStmt, nullptr);
+    if(r != SQLITE_OK) {
+        std::cout<<"error";
+    }
     r = sqlite3_step(sqlStmt);
     r = sqlite3_finalize(sqlStmt);
     return true;
@@ -168,6 +180,7 @@ bool setProvidesData(const packageRelData &pRelData) {
             r = sqlite3_finalize(sqlStmt);
         }
     }
+    return true;
 }
 
 bool createDepsTable() {
@@ -178,6 +191,9 @@ bool createDepsTable() {
                                     "dependVersion TEXT ); ";
     sqlite3_stmt *sqlStmt;
     int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createDepTableStr, -1, &sqlStmt, nullptr);
+    if(r != SQLITE_OK) {
+        std::cout<<"error";
+    }
     r = sqlite3_step(sqlStmt);
     r = sqlite3_finalize(sqlStmt);
     return true;
@@ -209,6 +225,7 @@ bool setDepData(const packageRelData &pRelData) {
             r = sqlite3_finalize(sqlStmt);
         }
     }
+    return true;
 }
 
 bool createNewDB() {
@@ -307,6 +324,7 @@ bool setPkgData(const pkgData &pData) {
         std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " package: "<<pData.name<<std::endl;
     }
     r = sqlite3_finalize(sqlStmt);
+    return true;
 }
 
 bool importGeneral(const std::string &dbFile, std::string &addPname) {
@@ -386,6 +404,7 @@ bool getDepData(const std::string &dbFile, packageRelData &pRelData) {
                         }
                     }
     }
+    return true;
 }
 
 bool importDeps(const std::string &dbFile, const std::string &pName) {
@@ -416,6 +435,10 @@ bool importData(const std::string &dbpath) {
                 importDeps(depsDb, addedPkgName);
                 std::remove(depsDb.c_str());
                 int r = rmdir((dbpath + "/" +dir->d_name).c_str());
+                if(r == -1)
+                {
+                    std::cout<<"error deleting folder"<<std::endl;
+                }
             }
         }
         closedir(d);
@@ -426,6 +449,7 @@ bool importData(const std::string &dbpath) {
     for(const auto &x : pkgRelData) {
         setDepData(x);
     }
+    return true;
 }
 
 bool initDB(const std::string &dbpath) {
@@ -440,6 +464,7 @@ bool initDB(const std::string &dbpath) {
     else {
         openNewDB("/tmp/pongTemp");
     }
+    return true;
 }
 
 bool closeDB() {

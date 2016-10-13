@@ -246,4 +246,6 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       if(mainvm.find("version") != mainvm.end()) {
           return P_OP::OP_VERSION;
       }
+
+      return P_OP::OP_HELP;
   }

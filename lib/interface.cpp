@@ -2,5 +2,6 @@
 #include "libConfig.hpp"
 
 bool addPackages() {
+    return true;
 }
 

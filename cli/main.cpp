@@ -41,8 +41,20 @@ int main (int argc, char *argv[])
     switch(mainOption) {
     case P_OP::OP_ADD :             opSucceded = addPackages();                        break;
     case P_OP::OP_DATABASE :        opSucceded = databaseDispatcher(secondaryOpts, libRet);
-                                    std::cout<<"pong says: "<<libRet<<std::endl;
-                                    break;
+        std::cout<<"pong says: "<<libRet<<std::endl;
+        break;
+    case P_OP::OP_UPGRADE:
+    case P_OP::OP_FRESHEN:
+    case P_OP::OP_HELP:
+    case P_OP::OP_UNKNOWN:
+    case P_OP::OP_VERSION:
+    case P_OP::OP_REMOVE:
+    case P_OP::OP_QUERY:
+    case P_OP::OP_SYNC:
+    case P_OP::OP_PS:
+    case P_OP::OP_VERCMP:
+        std::cout<<"option not implemented"<<std::endl;
     }
     dbClean();
+    return opSucceded;
 }
