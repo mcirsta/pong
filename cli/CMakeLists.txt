@@ -1,10 +1,12 @@
 set(CLI_SOURCES
+        cliVersion.cpp
         cliConfig.cpp
         dispatcher.cpp
 	main.cpp
 )
 
 set(CLI_HEADERS
+        cliVersion.hpp
         cliConfig.hpp
         dispatcher.hpp
 )
