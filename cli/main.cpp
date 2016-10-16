@@ -12,14 +12,16 @@ int main (int argc, char *argv[])
     boost::program_options::variables_map secondaryOpts;
     P_OP mainOption = cliConf.getConfig(secondaryOpts);
     bool opSucceded = true;
+
+    int8_t programStatus = 0;
     if(mainOption == P_OP::OP_VERSION) {
         //print version and exit
         printCliVersion();
-        return 0;
+        return programStatus;
     }
     if(mainOption == P_OP::OP_HELP) {
         //help message already printed, just exit
-        return 0;
+        return programStatus;
     }
     //we need to init the database for these options
     initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
