@@ -16,6 +16,6 @@ bool dbQuery(DBOpts opType, const char* opArg, std::string &retStr);
 
 bool initLib(std::string rootPath, std::string config, std::string arch, std::string DB);
 
-bool dbClean();
+bool pongLibClose();
 
 #endif

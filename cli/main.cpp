@@ -11,11 +11,16 @@ int main (int argc, char *argv[])
     CliConfig cliConf(argc, argv);
     boost::program_options::variables_map secondaryOpts;
     P_OP mainOption = cliConf.getConfig(secondaryOpts);
+    bool libInitDone = false;
 
     if(isLibInitRequired(mainOption)) {
         //we need to init the database for these options
-        initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
+        libInitDone = initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
                 secondaryOpts["dbpath"].as<std::string>());
+        if(!libInitDone) {
+            std::cout<<"could not initialize pong library"<<std::endl;
+            return 1;
+        }
     }
 
     std::string libRet = "";
@@ -39,7 +44,6 @@ int main (int argc, char *argv[])
         break;
     case P_OP::OP_DATABASE :
         opSucceded = databaseDispatcher(secondaryOpts, libRet);
-        dbClean();
         std::cout<<"pong says: "<<libRet<<std::endl;
         break;
     case P_OP::OP_UPGRADE:
@@ -52,6 +56,13 @@ int main (int argc, char *argv[])
         std::cout<<"option not implemented"<<std::endl;
         opSucceded = true;
         break;
+    }
+
+    if(libInitDone) {
+        if(!pongLibClose()) {
+            std::cout<<"could not properly close pong library"<<std::endl;
+            return 1;
+        }
     }
 
     int8_t programStatus = opSucceded ? 0 : 1;
