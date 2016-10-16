@@ -69,7 +69,7 @@ std::map<const std::string, const char*> CliConfig::pOpts =
    {"directdeps",    "<pkg name> just the direct depends specified by this package"}
   };
 
-/* !!! When adding now opt groups (boost_po::options_description) always add the common opts to them  */
+/* !!! When adding new opt groups (boost_po::options_description) always add the common opts to them  */
 
   CliConfig::CliConfig( int argc, char *argv[] ) : pargc(argc) , pargv(argv) {
       commonOpts.add_options()
