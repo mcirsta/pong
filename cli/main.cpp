@@ -35,17 +35,18 @@ int main (int argc, char *argv[])
         opSucceded = databaseDispatcher(secondaryOpts, libRet);
         std::cout<<"pong says: "<<libRet<<std::endl;
         break;
-    case P_OP::OP_UPGRADE:
-    case P_OP::OP_FRESHEN:
     case P_OP::OP_HELP:
-    case P_OP::OP_UNKNOWN:
         break;
     case P_OP::OP_VERSION:
+        break;
+    case P_OP::OP_UPGRADE:
+    case P_OP::OP_FRESHEN:
     case P_OP::OP_REMOVE:
     case P_OP::OP_QUERY:
     case P_OP::OP_SYNC:
     case P_OP::OP_PS:
     case P_OP::OP_VERCMP:
+    case P_OP::OP_UNKNOWN:
         std::cout<<"option not implemented"<<std::endl;
     }
     dbClean();
