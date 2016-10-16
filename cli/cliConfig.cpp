@@ -5,7 +5,8 @@
 
 bool isLibInitRequired(const P_OP& option)
 {
-    return ((option != P_OP::OP_HELP) && (option != P_OP::OP_VERSION));
+    return ((option != P_OP::OP_HELP) && (option != P_OP::OP_VERSION)
+            && (option != P_OP::OP_UNKNOWN));
 }
 
 std::map<const std::string, const char*> CliConfig::pOpts =
