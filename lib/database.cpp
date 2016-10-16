@@ -146,6 +146,12 @@ bool openLegacyDB(const std::string &dbpath) {
     return true;
 }
 
+bool deleteNewDB(const std::string &dbPath) {
+    std::string remDBFile = dbPath + "/frugalware-current.pdb";
+    std::remove(remDBFile.c_str());
+    return true;
+}
+
 bool openNewDB(const std::string &dbpath) {
     std::string dbName = dbpath + "/" + "frugalware-current.pdb";
     sqlite3 *dbHandle;
@@ -501,6 +507,8 @@ bool importData(const std::string &dbpath) {
         }
         closedir(d);
     }
+    std::string dbVerFile =  dbpath + "/.version";
+    std::remove(dbVerFile.c_str());
     for(const auto &x : pkgRelData) {
         setProvidesData(x);
     }
@@ -515,6 +523,7 @@ bool initDB(const std::string &dbpath) {
 
     if(dbUpdateNeeded("/tmp/pongTemp")) {
         openLegacyDB(dbpath);
+        deleteNewDB("/tmp/pongTemp");
         openNewDB("/tmp/pongTemp");
         createNewDB();
         importData("/tmp/pongTemp");
