@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sqlite3.h>
 #include <vector>
+#include <map>
 
 bool initDB(const std::string &dbpath);
 bool closeDB();
@@ -15,7 +16,7 @@ bool importData(const std::string &dbpath);
 
 struct pkgData {
     std::string str, name, desc, version, sha1sum, arch, group;
-    unsigned long long csize=0,usize=0;
+    sqlite3_int64 csize=0,usize=0;
 };
 
 enum class pRel { NONE = 1,
@@ -36,6 +37,7 @@ typedef std::vector<pkgDep> pkgDeps;
 typedef std::vector<std::string> pkgReplaces;
 typedef std::vector<std::string> pkgConflicts;
 typedef std::vector<std::string> pkgProvides;
+typedef sqlite3_stmt* p_sqlite3_stmt;
 
 struct packageRelData {
     std::string pkgName;
@@ -50,6 +52,12 @@ public:
     static sqlite3 *getDBHandle();
     static void setDBHandle(sqlite3 * dbH);
     static sqlite3 *DBHandle;
+    static sqlite3_int64 getGrId(std::string grName);
+    static sqlite3_int64 getArchId(std::string archName);
+    static std::map <std::string,sqlite3_int64> grIds;
+    static std::map <std::string,sqlite3_int64> archIds;
 };
+
+bool sqlite3PongQuery(sqlite3_stmt **sqlStmt, const char* queryText);
 
 #endif

@@ -6,8 +6,14 @@
 #include <cstring>
 #include <fstream>
 #include <unistd.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 sqlite3 *globalDB::DBHandle = nullptr;
+std::map <std::string,sqlite3_int64> globalDB::grIds;
+std::map <std::string,sqlite3_int64> globalDB::archIds;
+
 
 //muti-char because search will be in the order of the init here
 std::vector<std::pair<pRel,std::string>> dSigns = { {pRel::MORE_EQ, ">="},
@@ -28,20 +34,103 @@ sqlite3 *globalDB::getDBHandle() {
     return DBHandle;
 }
 
+inline bool sqlite3PongQuery(sqlite3_stmt **sqlStmt, const char* queryText) {
+    int r = sqlite3_prepare_v2(globalDB::getDBHandle(), queryText, -1, sqlStmt, nullptr);
+    if(r != SQLITE_OK) {
+        std::cout<<"error preparing query "<<queryText<<std::endl;
+        return false;
+    }
+    return true;
+}
+
+inline bool sqlite3PongBindText(p_sqlite3_stmt &sqlStmt,const std::string &text) {
+    int r = sqlite3_bind_text(sqlStmt, 1, text.c_str(), text.size(), SQLITE_STATIC);
+    if(r != SQLITE_OK) {
+        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<<std::endl;
+        return false;
+    }
+    return true;
+}
+
+sqlite3_int64 globalDB::getGrId(std::string grName) {
+    sqlite3_int64 retGrId;
+    if(grIds.find(grName) == grIds.end()) {
+        sqlite3_stmt *sqlStmt = nullptr;
+        bool success = false;
+        const char *addGroupSql = "INSERT INTO pgroups (gname) VALUES (?);";
+        if(sqlite3PongQuery(&sqlStmt, addGroupSql) && sqlite3PongBindText(sqlStmt,grName))
+        {
+            if(sqlite3_step(sqlStmt) == SQLITE_DONE ) {
+                success = true;
+            }
+            else {
+                std::cout<<"Error inserting group "<<grName<< " with " <<sqlite3_errmsg(globalDB::getDBHandle()) <<std::endl;
+            }
+        }
+        else {
+            std::cout<<"Error inserting group "<<grName<< " with " <<sqlite3_errmsg(globalDB::getDBHandle()) <<std::endl;
+
+        }
+        if(success) {
+            retGrId = sqlite3_last_insert_rowid(globalDB::getDBHandle());
+            grIds[grName] = retGrId;
+        }
+        else {
+            retGrId = -1;
+        }
+        sqlite3_finalize(sqlStmt);
+    }
+    else {
+        retGrId = grIds[grName];
+    }
+    return retGrId;
+}
+
+sqlite3_int64 globalDB::getArchId(std::string archName) {
+    sqlite3_int64 retArchId;
+    if(archIds.find(archName) == archIds.end()) {
+        sqlite3_stmt *sqlStmt = nullptr;
+        bool success = false;
+        const char *addArchSql = "INSERT INTO archs (aname) VALUES (?);";
+        if(sqlite3PongQuery(&sqlStmt, addArchSql) &&
+                sqlite3PongBindText(sqlStmt, archName))
+        {
+            if(sqlite3_step(sqlStmt) == SQLITE_DONE) {
+                success = true;
+            }
+        }
+        else {
+            std::cout<<"Error inserting arch "<<archName<<" with " <<sqlite3_errmsg(globalDB::getDBHandle()) <<std::endl;
+        }
+        if(success) {
+            retArchId = sqlite3_last_insert_rowid(globalDB::getDBHandle());
+            archIds[archName] = retArchId;
+        }
+        else {
+            retArchId = -1;
+        }
+        sqlite3_finalize(sqlStmt);
+    }
+    else {
+        retArchId = archIds[archName];
+    }
+    return retArchId;
+}
+
 bool extractOldDB(FILE *dbFile) {
-   return extractXZ(dbFile, "/tmp/pongTemp/");
+    return extractXZ(dbFile, "/tmp/pongTemp/");
 }
 
 bool dbUpdateNeeded(const std::string &dbpath) {
-//    //we always update the DB for now
-//    std::string dbName = dbpath + "/" + "frugalware-current.pdb";
-//    std::ifstream newDB(dbName);
-//    if (newDB.good())
-//    {
-//        std::remove(dbName.c_str());
-//    }
-//    return true;
-   return false;
+    //    //we always update the DB for now
+    //    std::string dbName = dbpath + "/" + "frugalware-current.pdb";
+    //    std::ifstream newDB(dbName);
+    //    if (newDB.good())
+    //    {
+    //        std::remove(dbName.c_str());
+    //    }
+    //    return true;
+    return true;
 }
 
 bool openLegacyDB(const std::string &dbpath) {
@@ -70,9 +159,7 @@ bool openNewDB(const std::string &dbpath) {
     return true;
 }
 
-bool createGroups(const std::string &grFile) {
-    std::ifstream gfile(grFile);
-    std::string grs;
+bool createGroups() {
     sqlite3_stmt *sqlStmt;
     const char *createGroupsTableStr = "CREATE TABLE pgroups ( " \
                                        " gname TEXT UNIQUE NOT NULL ); ";
@@ -82,24 +169,10 @@ bool createGroups(const std::string &grFile) {
     }
     r = sqlite3_step(sqlStmt);
     r = sqlite3_finalize(sqlStmt);
-    const char *addGroupSql = "INSERT INTO pgroups (gname) VALUES (?);";
-    if(gfile.good()) {
-        while(std::getline(gfile, grs)) {
-            r = sqlite3_prepare_v2(globalDB::getDBHandle(), addGroupSql, -1, &sqlStmt, nullptr);
-            r = sqlite3_bind_text(sqlStmt, 1, grs.c_str(), grs.size(), SQLITE_STATIC);
-            r = sqlite3_step(sqlStmt);
-            r = sqlite3_finalize(sqlStmt);
-        }
-    }
-    else {
-        std::cout<<"could not find groups file, "<<grFile<<std::endl;
-    }
     return true;
 }
 
-bool createArchs(const std::string &archFile) {
-    std::ifstream afile(archFile);
-    std::string ars;
+bool createArchs() {
     sqlite3_stmt *sqlStmt;
     const char *createArchTableStr = "CREATE TABLE archs ( " \
                                      " aname TEXT UNIQUE NOT NULL ); ";
@@ -109,18 +182,6 @@ bool createArchs(const std::string &archFile) {
     }
     r = sqlite3_step(sqlStmt);
     r = sqlite3_finalize(sqlStmt);
-    const char *addGroupSql = "INSERT INTO archs (aname) VALUES (?);";
-    if(afile.good()) {
-        while(std::getline(afile, ars)) {
-            r = sqlite3_prepare_v2(globalDB::getDBHandle(), addGroupSql, -1, &sqlStmt, nullptr);
-            r = sqlite3_bind_text(sqlStmt, 1, ars.c_str(), ars.size(), SQLITE_STATIC);
-            r = sqlite3_step(sqlStmt);
-            r = sqlite3_finalize(sqlStmt);
-        }
-    }
-    else {
-        std::cout<<"could not find archs file, "<<archFile<<std::endl;
-    }
     return true;
 }
 
@@ -150,8 +211,8 @@ bool createRelationsTable() {
 
 bool createProvidesTable() {
     const char *createProvidesTableStr = "CREATE TABLE provides ( " \
-                                    "newPkgID INT, " \
-                                    "providedPkg TEXT NOT NULL); ";
+                                         "newPkgID INT, " \
+                                         "providedPkg TEXT NOT NULL); ";
     sqlite3_stmt *sqlStmt;
     int r = sqlite3_prepare_v2(globalDB::getDBHandle(), createProvidesTableStr, -1, &sqlStmt, nullptr);
     if(r != SQLITE_OK) {
@@ -165,7 +226,7 @@ bool createProvidesTable() {
 bool setProvidesData(const packageRelData &pRelData) {
     const char *addGroupSql = "INSERT INTO provides (newPkgID, providedPkg) " \
                               "VALUES ( (SELECT rowid FROM packages WHERE name=? )," \
-                                         "?);";
+                              "?);";
     int r = 0;
     sqlite3_stmt *sqlStmt;
     for(const auto &x : pRelData.pProvides) {
@@ -201,13 +262,13 @@ bool createDepsTable() {
 
 bool setDepData(const packageRelData &pRelData) {
     const char *addDepSql = "INSERT INTO deps (packageID, dependID, dependRel, dependVersion) " \
-                              "VALUES ( (SELECT rowid FROM packages WHERE name=?1 ), " \
-                              "(CASE ifnull((SELECT rowid FROM packages WHERE name=?2), 0) " \
-                              "WHEN  0 " \
-                              "THEN (SELECT newPkgID FROM provides WHERE providedPkg=?2) " \
-                              "ELSE (SELECT rowid FROM packages WHERE name=?2) " \
-                              "END ), "\
-                              " ?3, ?4);";
+                            "VALUES ( (SELECT rowid FROM packages WHERE name=?1 ), " \
+                            "(CASE ifnull((SELECT rowid FROM packages WHERE name=?2), 0) " \
+                            "WHEN  0 " \
+                            "THEN (SELECT newPkgID FROM provides WHERE providedPkg=?2) " \
+                            "ELSE (SELECT rowid FROM packages WHERE name=?2) " \
+                            "END ), "\
+                            " ?3, ?4);";
     int r = 0;
     sqlite3_stmt *sqlStmt;
     for(const auto &x : pRelData.pDeps) {
@@ -254,8 +315,8 @@ bool createNewDB() {
         return false;
     }
     r = sqlite3_finalize(sqlStmt);
-    createGroups("groups.txt");
-    createArchs("archs.txt");
+    createGroups();
+    createArchs();
     createRelationsTable();
     createProvidesTable();
     createDepsTable();
@@ -299,26 +360,23 @@ void getPkgData(const std::string &dbFile, pkgData &p) {
                                     if(str=="%GROUPS%")
                                         std::getline(file, p.group);
     }
-    //hack to deal with gnome-docs stuff
-    if(p.group=="gnome-docs")
-        p.group="gnome-extra";
 }
 
 bool setPkgData(const pkgData &pData) {
     sqlite3_stmt *sqlStmt;
+    sqlite3_int64 archId = globalDB::getArchId(pData.arch);
+    sqlite3_int64 grId = globalDB::getGrId(pData.group);
     const char *updatePkgDB = "INSERT INTO packages(name,description,version," \
-                              "csize,usize,sha1sum,arch,pgroup) VALUES(?,?,?,?,?,?, " \
-                              "(SELECT rowid FROM archs WHERE aname=?), " \
-                              "(SELECT rowid FROM pgroups WHERE gname=?) );";
+                              "csize,usize,sha1sum,arch,pgroup) VALUES(?,?,?,?,?,?,?,?) ;";
     int r = sqlite3_prepare_v2(globalDB::getDBHandle(), updatePkgDB, -1, &sqlStmt, nullptr);
     r = sqlite3_bind_text(sqlStmt,1,pData.name.c_str(),pData.name.size(),SQLITE_STATIC);
     r = sqlite3_bind_text(sqlStmt,2,pData.desc.c_str(),pData.desc.size(),SQLITE_STATIC);
     r = sqlite3_bind_text(sqlStmt,3,pData.version.c_str(),pData.version.size(),SQLITE_STATIC);
-    r = sqlite3_bind_int(sqlStmt,4,pData.csize);
-    r = sqlite3_bind_int(sqlStmt,5,pData.usize);
+    r = sqlite3_bind_int64(sqlStmt,4,pData.csize);
+    r = sqlite3_bind_int64(sqlStmt,5,pData.usize);
     r = sqlite3_bind_text(sqlStmt,6,pData.sha1sum.c_str(),pData.sha1sum.size(),SQLITE_STATIC);
-    r = sqlite3_bind_text(sqlStmt,7,pData.arch.c_str(),pData.arch.size(),SQLITE_STATIC);
-    r = sqlite3_bind_text(sqlStmt,8,pData.group.c_str(),pData.group.size(),SQLITE_STATIC);
+    r = sqlite3_bind_int64(sqlStmt,7,archId);
+    r = sqlite3_bind_int64(sqlStmt,8,grId);
     r = sqlite3_step(sqlStmt);
     if(r != SQLITE_DONE) {
         std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " package: "<<pData.name<<std::endl;
