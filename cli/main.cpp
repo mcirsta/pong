@@ -14,11 +14,6 @@ int main (int argc, char *argv[])
     bool opSucceded = true;
 
     int8_t programStatus = 0;
-    if(mainOption == P_OP::OP_VERSION) {
-        //print version and exit
-        printCliVersion();
-        return programStatus;
-    }
     if(mainOption == P_OP::OP_HELP) {
         //help message already printed, just exit
         return programStatus;
@@ -35,10 +30,12 @@ int main (int argc, char *argv[])
         opSucceded = databaseDispatcher(secondaryOpts, libRet);
         std::cout<<"pong says: "<<libRet<<std::endl;
         break;
-    case P_OP::OP_HELP:
-        break;
     case P_OP::OP_VERSION:
+        //print version and exit
+        printCliVersion();
+        opSucceded = true;
         break;
+    case P_OP::OP_HELP:
     case P_OP::OP_UPGRADE:
     case P_OP::OP_FRESHEN:
     case P_OP::OP_REMOVE:
