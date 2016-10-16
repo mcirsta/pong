@@ -23,12 +23,9 @@ int main (int argc, char *argv[])
 
     std::string libRet = "";
     switch(mainOption) {
-    case P_OP::OP_ADD :
-        opSucceded = addPackages();
-        break;
-    case P_OP::OP_DATABASE :
-        opSucceded = databaseDispatcher(secondaryOpts, libRet);
-        std::cout<<"pong says: "<<libRet<<std::endl;
+    case P_OP::OP_UNKNOWN:
+        //do nothing, exit successfully
+        opSucceded = true;
         break;
     case P_OP::OP_VERSION:
         //print version and exit successfully
@@ -39,9 +36,12 @@ int main (int argc, char *argv[])
         //help message already printed, exit successfully
         opSucceded = true;
         break;
-    case P_OP::OP_UNKNOWN:
-        //do nothing, exit successfully
-        opSucceded = true;
+    case P_OP::OP_ADD :
+        opSucceded = addPackages();
+        break;
+    case P_OP::OP_DATABASE :
+        opSucceded = databaseDispatcher(secondaryOpts, libRet);
+        std::cout<<"pong says: "<<libRet<<std::endl;
         break;
     case P_OP::OP_UPGRADE:
     case P_OP::OP_FRESHEN:
