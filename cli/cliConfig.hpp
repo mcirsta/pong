@@ -1,12 +1,13 @@
-/*Comments*/
-#ifndef CLICONFIG_H_
-#define CLICONFIG_H_
 
+#ifndef CLICONFIG_HPP
+#define CLICONFIG_HPP
+
+#include <boost/program_options.hpp>
 #include <string>
 #include <map>
 
-#include <boost/program_options.hpp>
 namespace boost_po = boost::program_options;
+
 
 enum class P_OP {    OP_UNKNOWN,
                      OP_VERSION,
@@ -21,6 +22,9 @@ enum class P_OP {    OP_UNKNOWN,
                      OP_PS,
                      OP_VERCMP,
                 };
+
+bool isLibInitRequired(const P_OP& option);
+
 
 class CliConfig {
     static std::map<const std::string, const char*> pOpts;
@@ -43,4 +47,5 @@ public:
     P_OP getConfig(boost::program_options::variables_map &secondaryVM);
 };
 
-#endif
+
+#endif //CLICONFIG_HPP

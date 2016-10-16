@@ -6,9 +6,6 @@
 #include <iostream>
 
 
-bool isLibInitRequired(const P_OP& option);
-
-
 int main (int argc, char *argv[]) 
 {
     CliConfig cliConf(argc, argv);
@@ -58,8 +55,3 @@ int main (int argc, char *argv[])
     return programStatus;
 }
 
-
-bool isLibInitRequired(const P_OP& option)
-{
-    return ((option != P_OP::OP_HELP) && (option != P_OP::OP_VERSION));
-}

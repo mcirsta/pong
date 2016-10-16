@@ -1,6 +1,12 @@
-#include "cliConfig.hpp"
 
+#include "cliConfig.hpp"
 #include <iostream>
+
+
+bool isLibInitRequired(const P_OP& option)
+{
+    return ((option != P_OP::OP_HELP) && (option != P_OP::OP_VERSION));
+}
 
 std::map<const std::string, const char*> CliConfig::pOpts =
 {{"help",          "produce a help message"},
