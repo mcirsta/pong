@@ -51,6 +51,7 @@ int main (int argc, char *argv[])
     case P_OP::OP_PS:
     case P_OP::OP_VERCMP:
         std::cout<<"option not implemented"<<std::endl;
+        opSucceded = true;
         break;
     }
     dbClean();
