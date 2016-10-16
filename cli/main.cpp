@@ -31,12 +31,16 @@ int main (int argc, char *argv[])
         std::cout<<"pong says: "<<libRet<<std::endl;
         break;
     case P_OP::OP_VERSION:
-        //print version and exit
+        //print version and exit successfully
         printCliVersion();
         opSucceded = true;
         break;
     case P_OP::OP_HELP:
-        //help message already printed, just exit
+        //help message already printed, exit successfully
+        opSucceded = true;
+        break;
+    case P_OP::OP_UNKNOWN:
+        //do nothing, exit successfully
         opSucceded = true;
         break;
     case P_OP::OP_UPGRADE:
@@ -46,8 +50,8 @@ int main (int argc, char *argv[])
     case P_OP::OP_SYNC:
     case P_OP::OP_PS:
     case P_OP::OP_VERCMP:
-    case P_OP::OP_UNKNOWN:
         std::cout<<"option not implemented"<<std::endl;
+        break;
     }
     dbClean();
 
