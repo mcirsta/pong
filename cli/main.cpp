@@ -41,6 +41,7 @@ int main (int argc, char *argv[])
         break;
     case P_OP::OP_DATABASE :
         opSucceded = databaseDispatcher(secondaryOpts, libRet);
+        dbClean();
         std::cout<<"pong says: "<<libRet<<std::endl;
         break;
     case P_OP::OP_UPGRADE:
@@ -54,7 +55,6 @@ int main (int argc, char *argv[])
         opSucceded = true;
         break;
     }
-    dbClean();
 
     programStatus = opSucceded ? 0 : 1;
     return programStatus;
