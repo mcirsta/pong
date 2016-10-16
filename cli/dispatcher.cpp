@@ -2,6 +2,7 @@
 
 
 bool databaseDispatcher(const  boost::program_options::variables_map &secondaryOpts, std::string &retStr) {
+    bool isQuerySuccessful = false;
     if(secondaryOpts.find("alldeps") != secondaryOpts.end()) {
        return dbQuery(DBOpts::OP_ALL_DEPS, secondaryOpts["alldeps"].as<std::string>().c_str(), retStr);
     }
@@ -17,5 +18,5 @@ bool databaseDispatcher(const  boost::program_options::variables_map &secondaryO
                 if(secondaryOpts.find("directdeps") != secondaryOpts.end()) {
                     return dbQuery(DBOpts::OP_DIRECT_DEPS, secondaryOpts["directdeps"].as<std::string>().c_str(), retStr);
                 }
-    return false;
+    return isQuerySuccessful;
 }
