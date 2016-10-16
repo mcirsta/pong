@@ -14,13 +14,13 @@ int main (int argc, char *argv[])
     bool opSucceded = true;
 
     int8_t programStatus = 0;
-    if(mainOption == P_OP::OP_HELP) {
-        //help message already printed, just exit
-        return programStatus;
+
+    if(mainOption != P_OP::OP_HELP) {
+        //we need to init the database for these options
+        initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
+                secondaryOpts["dbpath"].as<std::string>());
     }
-    //we need to init the database for these options
-    initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
-            secondaryOpts["dbpath"].as<std::string>());
+
     std::string libRet = "";
     switch(mainOption) {
     case P_OP::OP_ADD :
@@ -36,6 +36,9 @@ int main (int argc, char *argv[])
         opSucceded = true;
         break;
     case P_OP::OP_HELP:
+        //help message already printed, just exit
+        opSucceded = true;
+        break;
     case P_OP::OP_UPGRADE:
     case P_OP::OP_FRESHEN:
     case P_OP::OP_REMOVE:
