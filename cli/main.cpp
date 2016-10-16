@@ -49,5 +49,7 @@ int main (int argc, char *argv[])
         std::cout<<"option not implemented"<<std::endl;
     }
     dbClean();
-    return opSucceded;
+
+    programStatus = opSucceded ? 0 : 1;
+    return programStatus;
 }
