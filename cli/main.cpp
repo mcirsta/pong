@@ -28,14 +28,18 @@ int main (int argc, char *argv[])
             secondaryOpts["dbpath"].as<std::string>());
     std::string libRet = "";
     switch(mainOption) {
-    case P_OP::OP_ADD :             opSucceded = addPackages();                        break;
-    case P_OP::OP_DATABASE :        opSucceded = databaseDispatcher(secondaryOpts, libRet);
+    case P_OP::OP_ADD :
+        opSucceded = addPackages();
+        break;
+    case P_OP::OP_DATABASE :
+        opSucceded = databaseDispatcher(secondaryOpts, libRet);
         std::cout<<"pong says: "<<libRet<<std::endl;
         break;
     case P_OP::OP_UPGRADE:
     case P_OP::OP_FRESHEN:
     case P_OP::OP_HELP:
     case P_OP::OP_UNKNOWN:
+        break;
     case P_OP::OP_VERSION:
     case P_OP::OP_REMOVE:
     case P_OP::OP_QUERY:
