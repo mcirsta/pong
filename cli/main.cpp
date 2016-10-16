@@ -6,6 +6,9 @@
 #include <iostream>
 
 
+bool isLibInitRequired(const P_OP& option);
+
+
 int main (int argc, char *argv[]) 
 {
     CliConfig cliConf(argc, argv);
@@ -15,7 +18,7 @@ int main (int argc, char *argv[])
 
     int8_t programStatus = 0;
 
-    if((mainOption != P_OP::OP_HELP) && (mainOption != P_OP::OP_VERSION)) {
+    if(isLibInitRequired(mainOption)) {
         //we need to init the database for these options
         initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
                 secondaryOpts["dbpath"].as<std::string>());
@@ -53,4 +56,10 @@ int main (int argc, char *argv[])
 
     programStatus = opSucceded ? 0 : 1;
     return programStatus;
+}
+
+
+bool isLibInitRequired(const P_OP& option)
+{
+    return ((option != P_OP::OP_HELP) && (option != P_OP::OP_VERSION));
 }
