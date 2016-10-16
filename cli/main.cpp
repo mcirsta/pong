@@ -11,9 +11,6 @@ int main (int argc, char *argv[])
     CliConfig cliConf(argc, argv);
     boost::program_options::variables_map secondaryOpts;
     P_OP mainOption = cliConf.getConfig(secondaryOpts);
-    bool opSucceded = true;
-
-    int8_t programStatus = 0;
 
     if(isLibInitRequired(mainOption)) {
         //we need to init the database for these options
@@ -22,6 +19,7 @@ int main (int argc, char *argv[])
     }
 
     std::string libRet = "";
+    bool opSucceded = true;
     switch(mainOption) {
     case P_OP::OP_UNKNOWN:
         //do nothing, exit successfully
@@ -56,7 +54,7 @@ int main (int argc, char *argv[])
         break;
     }
 
-    programStatus = opSucceded ? 0 : 1;
+    int8_t programStatus = opSucceded ? 0 : 1;
     return programStatus;
 }
 
