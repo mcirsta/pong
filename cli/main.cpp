@@ -15,7 +15,7 @@ int main (int argc, char *argv[])
 
     int8_t programStatus = 0;
 
-    if(mainOption != P_OP::OP_HELP) {
+    if((mainOption != P_OP::OP_HELP) && (mainOption != P_OP::OP_VERSION)) {
         //we need to init the database for these options
         initLib(secondaryOpts["root"].as<std::string>(), secondaryOpts["config"].as<std::string>(), secondaryOpts["arch"].as<std::string>(),
                 secondaryOpts["dbpath"].as<std::string>());
