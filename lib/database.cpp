@@ -519,19 +519,19 @@ bool importData(const std::string &dbpath) {
     return true;
 }
 
-bool initDB(const std::string& oldDbPath) {
-    std::cout << "database path: " << oldDbPath << std::endl;
+bool initDB(const std::string& oldPath) {
+    std::cout << "database path: " << oldPath << std::endl;
 
-    std::string newDbPath = "/tmp/pongTemp";
-    if(dbUpdateNeeded(newDbPath)) {
-        openLegacyDB(oldDbPath);
-        deleteNewDB(newDbPath);
-        openNewDB(newDbPath);
+    std::string newPath = "/tmp/pongTemp";
+    if(dbUpdateNeeded(newPath)) {
+        openLegacyDB(oldPath);
+        deleteNewDB(newPath);
+        openNewDB(newPath);
         createNewDB();
-        importData(newDbPath);
+        importData(newPath);
     }
     else {
-        openNewDB(newDbPath);
+        openNewDB(newPath);
     }
     return true;
 }
