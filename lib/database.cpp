@@ -172,16 +172,16 @@ bool dbUpdateNeeded(const std::string &dbpath) {
 }
 
 bool openLegacyDB(const std::string& dbpath) {
-    std::string dbName = dbpath + "/" + "frugalware-current.fdb";
+    const std::string FILENAME = dbpath + "/" + "frugalware-current.fdb";
     bool isDbOpened = false;
 
-    FILE *dbFile = fopen( dbName.c_str(), "r");
+    FILE* dbFile = fopen(FILENAME.c_str(), "r");
     if(!checkXZ(dbFile)) {
-        std::cout<<"invalid original database file: "<<dbName<<std::endl;
+        std::cout << "invalid original database file: " << FILENAME << std::endl;
         isDbOpened = false;
     }
     else {
-        std::cout<<"looks good, opening: "<<dbName<<std::endl;
+        std::cout << "looks good, opening: " << FILENAME << std::endl;
         extractOldDB(dbFile);
         fclose(dbFile);
         isDbOpened = true;
