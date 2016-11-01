@@ -61,6 +61,15 @@ inline bool sqlite3PongBindInt(p_sqlite3_stmt &sqlStmt,const int &bindInt, const
     return true;
 }
 
+inline bool sqlite3PongBindInt64(p_sqlite3_stmt &sqlStmt,const int64_t &bindInt, const int &bindPos) {
+    int r = sqlite3_bind_int64(sqlStmt, bindPos,bindInt);
+    if(r != SQLITE_OK) {
+        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<<std::endl;
+        return false;
+    }
+    return true;
+}
+
 inline bool sqlite3PongStep(p_sqlite3_stmt &sqlStmt) {
     int r = sqlite3_step(sqlStmt);
     if(r != SQLITE_DONE) {
@@ -277,24 +286,28 @@ bool createRelationsTable() {
 }
 
 bool setProvidesData(const packageRelData &pRelData) {
-    const char *addGroupSql = "INSERT INTO provides (newPkgID, providedPkg) " \
-                              "VALUES ( (SELECT rowid FROM packages WHERE name=? )," \
-                              "?);";
-    int r = 0;
+    const char *addProvidesSql = "INSERT INTO provides (newPkgID, providedPkg) " \
+                                 "VALUES ( (SELECT rowid FROM packages WHERE name=? )," \
+                                 "?);";
+    bool success = false;
     sqlite3_stmt *sqlStmt;
     for(const auto &x : pRelData.pProvides) {
         {
-            r = sqlite3_prepare_v2(globalDB::getDBHandle(), addGroupSql, -1, &sqlStmt, nullptr);
-            r = sqlite3_bind_text(sqlStmt, 1, pRelData.pkgName.c_str(), pRelData.pkgName.size(), SQLITE_STATIC);;
-            r = sqlite3_bind_text(sqlStmt, 2, x.c_str(), x.size(), SQLITE_STATIC);
-            r = sqlite3_step(sqlStmt);
-            if(r != SQLITE_DONE) {
-                std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<< pRelData.pkgName<<" - "<<x<<std::endl;
+            if(sqlite3PongQuery(&sqlStmt, addProvidesSql) &&
+                    sqlite3PongBindText(sqlStmt, pRelData.pkgName, 1) &&
+                    sqlite3PongBindText(sqlStmt, x, 2) &&
+                    sqlite3PongStep(sqlStmt) &&
+                    sqlite3PongFinalize(sqlStmt)) {
+                success = true;
             }
-            r = sqlite3_finalize(sqlStmt);
+            else {
+                success = false;
+                std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<< pRelData.pkgName<<" - "<<x<<std::endl;
+                break;
+            }
         }
     }
-    return true;
+    return success;
 }
 
 bool setDepData(const packageRelData &pRelData) {
@@ -306,24 +319,30 @@ bool setDepData(const packageRelData &pRelData) {
                             "ELSE (SELECT rowid FROM packages WHERE name=?2) " \
                             "END ), "\
                             " ?3, ?4);";
-    int r = 0;
+    bool success = false;
     sqlite3_stmt *sqlStmt;
     for(const auto &x : pRelData.pDeps) {
         {
-            r = sqlite3_prepare_v2(globalDB::getDBHandle(), addDepSql, -1, &sqlStmt, nullptr);
-            r = sqlite3_bind_text(sqlStmt, 1, pRelData.pkgName.c_str(), pRelData.pkgName.size(), SQLITE_STATIC);
-            r = sqlite3_bind_text(sqlStmt, 2, x.depName.c_str(), x.depName.size(), SQLITE_STATIC);;
-            r = sqlite3_bind_int(sqlStmt, 3, static_cast<int>(x.depRel));
-            r = sqlite3_bind_text(sqlStmt, 4, x.depVer.c_str(), x.depVer.size(), SQLITE_STATIC);
-            r = sqlite3_step(sqlStmt);
-            if(r != SQLITE_DONE) {
-                //OK so couldn't find the needed dep
-                std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<< pRelData.pkgName<<" - "<<x.depName<<std::endl;
+            if(sqlite3PongQuery(&sqlStmt, addDepSql) &&
+                    sqlite3PongBindText(sqlStmt, pRelData.pkgName, 1) &&
+                    sqlite3PongBindText(sqlStmt, x.depName, 2) &&
+                    sqlite3PongBindInt(sqlStmt,static_cast<int>(x.depRel), 3) &&
+                    sqlite3PongBindText(sqlStmt, x.depName, 4) &&
+                    sqlite3PongStep(sqlStmt) &&
+                    sqlite3PongFinalize(sqlStmt))
+            {
+                success = true;
             }
-            r = sqlite3_finalize(sqlStmt);
+            else {
+                //We couldn't find the needed dep
+                success = false;
+                std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<< pRelData.pkgName<<" - "<<x.depName<<std::endl;
+                break;
+            }
+
         }
     }
-    return true;
+    return success;
 }
 
 bool createNewDB() {
@@ -377,25 +396,31 @@ void getPkgData(const std::string &dbFile, pkgData &p) {
 
 bool setPkgData(const pkgData &pData) {
     sqlite3_stmt *sqlStmt;
+    bool success = false;
     sqlite3_int64 archId = globalDB::getArchId(pData.arch);
     sqlite3_int64 grId = globalDB::getGrId(pData.group);
     const char *updatePkgDB = "INSERT INTO packages(name,description,version," \
                               "csize,usize,sha1sum,arch,pgroup) VALUES(?,?,?,?,?,?,?,?) ;";
-    int r = sqlite3_prepare_v2(globalDB::getDBHandle(), updatePkgDB, -1, &sqlStmt, nullptr);
-    r = sqlite3_bind_text(sqlStmt,1,pData.name.c_str(),pData.name.size(),SQLITE_STATIC);
-    r = sqlite3_bind_text(sqlStmt,2,pData.desc.c_str(),pData.desc.size(),SQLITE_STATIC);
-    r = sqlite3_bind_text(sqlStmt,3,pData.version.c_str(),pData.version.size(),SQLITE_STATIC);
-    r = sqlite3_bind_int64(sqlStmt,4,pData.csize);
-    r = sqlite3_bind_int64(sqlStmt,5,pData.usize);
-    r = sqlite3_bind_text(sqlStmt,6,pData.sha1sum.c_str(),pData.sha1sum.size(),SQLITE_STATIC);
-    r = sqlite3_bind_int64(sqlStmt,7,archId);
-    r = sqlite3_bind_int64(sqlStmt,8,grId);
-    r = sqlite3_step(sqlStmt);
-    if(r != SQLITE_DONE) {
+    if ( sqlite3PongQuery(&sqlStmt, updatePkgDB) &&
+         sqlite3PongBindText(sqlStmt, pData.name, 1) &&
+         sqlite3PongBindText(sqlStmt, pData.desc, 2) &&
+         sqlite3PongBindText(sqlStmt, pData.version, 3) &&
+         sqlite3PongBindInt64(sqlStmt, pData.csize, 4) &&
+         sqlite3PongBindInt64(sqlStmt, pData.usize, 5) &&
+         sqlite3PongBindText(sqlStmt, pData.sha1sum, 6) &&
+         sqlite3PongBindInt(sqlStmt, archId, 7) &&
+         sqlite3PongBindInt(sqlStmt, grId, 8) &&
+         sqlite3PongStep(sqlStmt) &&
+         sqlite3PongFinalize(sqlStmt) )
+    {
+        success = true;
+    }
+    else {
+        success = false;
         std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " package: "<<pData.name<<std::endl;
     }
-    r = sqlite3_finalize(sqlStmt);
-    return true;
+
+    return success;
 }
 
 bool importGeneral(const std::string &dbFile, std::string &addPname) {

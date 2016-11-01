@@ -62,6 +62,7 @@ bool sqlite3PongQuery(sqlite3_stmt **sqlStmt, const char* queryText);
 bool sqlite3PongBindText(p_sqlite3_stmt &sqlStmt, const std::string &bindText, const int &bindPos = 1);
 bool sqlite3PongBindInt(p_sqlite3_stmt &sqlStmt,const int &bindInt, const int &bindPos = 1);
 bool sqlite3PongStep(p_sqlite3_stmt &sqlStmt);
+bool sqlite3PongFinalize(p_sqlite3_stmt &sqlStmt);
 
 
 #endif
