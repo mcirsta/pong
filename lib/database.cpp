@@ -23,6 +23,18 @@ std::vector<std::pair<pRel,std::string>> dSigns = { {pRel::MORE_EQ, ">="},
                                                     {pRel::LESS, "<"},
                                                   };
 
+
+const std::map<std::string, PackageLines> pacLines =  { {"%NAME%", PackageLines::NAME},
+                                                  {"%VERSION%", PackageLines::VERSION},
+                                                  {"%DESC%", PackageLines::DESC},
+                                                  {"%SHA1SUM%",  PackageLines::SHA1SUM},
+                                                  {"%CSIZE%", PackageLines::CSIZE},
+                                                  {"%USIZE%", PackageLines::USIZE},
+                                                  {"%ARCH%", PackageLines::ARCH},
+                                                  {"%GROUPS%", PackageLines::GROUPS},
+                                                };
+
+
 std::vector<packageRelData> pkgRelData;
 
 
@@ -358,39 +370,45 @@ bool createNewDB() {
 void getPkgData(const std::string &dbFile, pkgData &p) {
     std::ifstream file(dbFile);
     std::string str;
+    std::map<std::string, PackageLines>::const_iterator pEnumLine;
     while (std::getline(file, str))
     {
         if(str.size()<1) {
             continue;
         }
 
-        if(str=="%NAME%")
-            std::getline(file, p.name);
-        else
-            if(str=="%VERSION%")
+        pEnumLine = pacLines.find(str);
+
+        if(pEnumLine != pacLines.cend()) {
+            switch(pEnumLine->second) {
+            case PackageLines::NAME:
+                std::getline(file, p.name);
+                break;
+            case PackageLines::VERSION:
                 std::getline(file, p.version);
-            else
-                if(str=="%DESC%")
-                    std::getline(file, p.desc);
-                else
-                    if(str=="%SHA1SUM%")
-                        std::getline(file, p.sha1sum);
-                    else
-                        if(str=="%CSIZE%") {
-                            std::getline(file, str);
-                            p.csize = std::stoull(str);
-                        }
-                        else
-                            if(str=="%USIZE%") {
-                                std::getline(file, str);
-                                p.usize = std::stoull(str);
-                            }
-                            else
-                                if(str=="%ARCH%")
-                                    std::getline(file, p.arch);
-                                else
-                                    if(str=="%GROUPS%")
-                                        std::getline(file, p.group);
+                break;
+            case PackageLines::DESC:
+                std::getline(file, p.desc);
+                break;
+            case PackageLines::SHA1SUM:
+                std::getline(file, p.sha1sum);
+                break;
+            case PackageLines::CSIZE:
+                std::getline(file, str);
+                p.csize = std::stoull(str);
+                break;
+            case PackageLines::USIZE:
+                std::getline(file, str);
+                p.usize = std::stoull(str);
+                break;
+            case PackageLines::ARCH:
+                std::getline(file, p.arch);
+                break;
+            case PackageLines::GROUPS:
+                std::getline(file, p.group);
+                break;
+            }
+        }
     }
 }
 

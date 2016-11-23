@@ -65,4 +65,15 @@ bool sqlite3PongStep(p_sqlite3_stmt &sqlStmt);
 bool sqlite3PongFinalize(p_sqlite3_stmt &sqlStmt);
 
 
+enum class PackageLines {
+    NAME,
+            VERSION,
+            DESC,
+            SHA1SUM,
+            CSIZE,
+            USIZE,
+            ARCH,
+            GROUPS,
+};
+
 #endif
