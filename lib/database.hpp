@@ -15,8 +15,9 @@ bool createNewDB();
 bool importData(const std::string &dbpath);
 
 struct pkgData {
-    std::string str, name, desc, version, sha1sum, arch, group;
-    sqlite3_int64 csize=0,usize=0;
+    std::string name, desc, version, sha1sum, arch;
+    sqlite3_int64 csize=0,usize=0, dbPkgId=0;
+    std::vector<sqlite_int64> groupIds;
 };
 
 enum class pRel { NONE = 1,
@@ -52,7 +53,7 @@ public:
     static sqlite3 *getDBHandle();
     static void setDBHandle(sqlite3 * dbH);
     static sqlite3 *DBHandle;
-    static sqlite3_int64 getGrId(std::string grName);
+    static sqlite3_int64 getGroupId(std::string grName);
     static sqlite3_int64 getArchId(std::string archName);
     static std::map <std::string,sqlite3_int64> grIds;
     static std::map <std::string,sqlite3_int64> archIds;

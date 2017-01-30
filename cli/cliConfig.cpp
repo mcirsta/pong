@@ -160,10 +160,10 @@ std::map<const std::string, const char*> CliConfig::pOpts =
       syncOpts.add(addRemoveOpts);
 
       databaseOpts.add_options()
-      ("rebuilddeps",  boost_po::value<std::string>(),   pOpts["rebuilddeps"])
-      ("alldeps",      boost_po::value<std::string>(),   pOpts["alldeps"])
-      ("revdeps",      boost_po::value<std::string>(),   pOpts["revdeps"])
-      ("directdeps",   boost_po::value<std::string>(),   pOpts["directdeps"])
+      ("rebuilddeps",     pOpts["rebuilddeps"])
+      ("alldeps",         pOpts["alldeps"])
+      ("revdeps",         pOpts["revdeps"])
+      ("directdeps",      pOpts["directdeps"])
       ;
 
       databaseOpts.add(commonOpts);

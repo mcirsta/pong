@@ -2,22 +2,55 @@
 #include "database.hpp"
 
 #include <iostream>
+#include <cstring>
 
-int getPkgID(const std::string &pkgName) {
+typedef std::map<std::string, int> pkgNameID;
+
+bool getPkgID(pkgNameID &pkgNames) {
     sqlite3_stmt *sqlStmt;
-    int pkgID = -1;
-    const char *getDirectDepsStr = "SELECT rowid FROM packages WHERE name=?;";
-    if(sqlite3PongQuery(&sqlStmt, getDirectDepsStr) &&
-            sqlite3PongBindText(sqlStmt, pkgName, 1) &&
-            sqlite3_step(sqlStmt) == SQLITE_ROW)
-    {
-        pkgID = sqlite3_column_int(sqlStmt, 0);
+    std::vector<int> pkgIDs;
+    std::string getDirectDepsStr;
+    if(pkgNames.size() < 1)  {
+        std::cout<<"at least one package needed"<<std::endl;
+        return false;
+    }
+    else  {
+        if(pkgNames.size() == 1) {
+            getDirectDepsStr = "SELECT rowid, name FROM packages WHERE name=?;";
+        }
+        else  {
+            getDirectDepsStr = "SELECT rowid, name FROM packages WHERE name=? ";
+            for(unsigned int i=0; i<pkgNames.size()-1; i++) {
+                getDirectDepsStr += " OR name=?";
+            }
+            getDirectDepsStr += " ;";
+        }
+    }
+    getDirectDepsStr ="SELECT rowid, name FROM packages WHERE name=?  OR name=? ;";
+    if(sqlite3PongQuery(&sqlStmt, getDirectDepsStr.c_str()))   {
+        unsigned int pNr = 1;
+        for(const auto &pkg:pkgNames) {
+            if(!sqlite3PongBindText(sqlStmt, pkg.first, pNr)) {
+                break;
+            }
+            pNr++;
+        }
+        int sqlRes = sqlite3_step(sqlStmt);
+        while(sqlRes == SQLITE_ROW)  {
+            int pkgID = sqlite3_column_int(sqlStmt, 0);
+            std::string pName = (const char*)sqlite3_column_text(sqlStmt, 1);
+            pkgNames[pName] = pkgID;
+            sqlRes = sqlite3_step(sqlStmt);
+        }
+        if(sqlRes != SQLITE_DONE) {
+            std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<<std::endl;
+        }
     }
     else {
-        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<<pkgName<<std::endl;
+        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<<std::endl;
     }
     sqlite3_finalize(sqlStmt);
-    return pkgID;
+    return true;
 }
 
 bool allDepsQuery(int pkgID, std::string &retStr) {
@@ -96,17 +129,23 @@ bool revdepsQuery(int pkgID, std::string &retStr) {
 }
 
 
-bool dbQuery(DBOpts opType, const char* opArg, std::string &retStr) {
-    int pkgId = getPkgID(opArg);
-    if(pkgId == 0) {
-        std::cout<<"package "<<opArg<<" not found in the database"<<std::endl;
-        return "";
+bool dbQuery(DBOpts opType,const std::vector<std::string> &opArg, std::string &retStr) {
+    pkgNameID reqPkgs;
+    for(const auto &pkg:opArg) {
+        reqPkgs[pkg] = -1;
     }
-    switch (opType) {
-    case DBOpts::OP_ALL_DEPS:       return allDepsQuery(pkgId, retStr);
-    case DBOpts::OP_DIRECT_DEPS:    return directDepsQuery(pkgId, retStr);
-    case DBOpts::OP_REBUILD_DEPS:   return rebuildDepsQuery(pkgId, retStr);
-    case DBOpts::OP_REV_DEPS:       return revdepsQuery(pkgId, retStr);
-    default: std::cout<<"unknown op"<<std::endl;    return "";
+    getPkgID(reqPkgs);
+    for(const auto &pkg:reqPkgs) {
+        if(pkg.second == -1) {
+             std::cout<<"package "<<pkg.first<<" not found in the database"<<std::endl;
+        }
     }
+    //    switch (opType) {
+    //    case DBOpts::OP_ALL_DEPS:       return allDepsQuery(pkgId, retStr);
+    //    case DBOpts::OP_DIRECT_DEPS:    return directDepsQuery(pkgId, retStr);
+    //    case DBOpts::OP_REBUILD_DEPS:   return rebuildDepsQuery(pkgId, retStr);
+    //    case DBOpts::OP_REV_DEPS:       return revdepsQuery(pkgId, retStr);
+    //    default: std::cout<<"unknown op"<<std::endl;    return "";
+    //    }
+    return true;
 }

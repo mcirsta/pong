@@ -115,7 +115,7 @@ bool createDBQuery(const char* createSQLQuery) {
 }
 
 
-sqlite3_int64 globalDB::getGrId(std::string grName) {
+sqlite3_int64 globalDB::getGroupId(std::string grName) {
     sqlite3_int64 retGrId;
     if(grIds.find(grName) == grIds.end()) {
         sqlite3_stmt *sqlStmt = nullptr;
@@ -258,6 +258,13 @@ bool createDepsTable() {
     return createDBQuery(createDepTableStr);
 }
 
+bool createGroupRelations() {
+    const char *createGroupRelationsStr = "CREATE TABLE groupRel ( " \
+                                  "groupID           INT     NOT NULL REFERENCES pgroups," \
+                                  "packageID         INT     NOT NULL REFERENCES packages);";
+    return createDBQuery(createGroupRelationsStr);
+}
+
 bool createPackages() {
     const char *createMainDBStr = "CREATE TABLE packages ( " \
                                   "name           TEXT  UNIQUE  NOT NULL," \
@@ -266,11 +273,10 @@ bool createPackages() {
                                   "csize          INT     NOT NULL," \
                                   "usize          INT     NOT NULL," \
                                   "arch           INT     NOT NULL REFERENCES archs," \
-                                  "pgroup         INT    NOT NULL REFERENCES pgroups," \
-                                  "sha1sum        TEXT," \
-                                  "URL            TEXT );";
+                                  "sha1sum        TEXT);";
     return createDBQuery(createMainDBStr);
 }
+
 
 bool createRelationsTable() {
     const char *createRelTableStr = "CREATE TABLE depRels ( " \
@@ -279,9 +285,9 @@ bool createRelationsTable() {
     bool success = false;
     success = createDBQuery(createRelTableStr);
     if(success) {
-        const char *addGroupSql = "INSERT INTO depRels (relID, relSign) VALUES (?, ?);";
+        const char *addRelationsSql = "INSERT INTO depRels (relID, relSign) VALUES (?, ?);";
         sqlite3_stmt *sqlStmt = nullptr;
-        sqlite3PongQuery(&sqlStmt, addGroupSql);
+        sqlite3PongQuery(&sqlStmt, addRelationsSql);
         for(const auto &x : dSigns) {
             if(sqlite3PongBindInt(sqlStmt, static_cast<int>(x.first), 1) &&
                     sqlite3PongBindText(sqlStmt, x.second, 2) &&
@@ -289,7 +295,7 @@ bool createRelationsTable() {
                  sqlite3_reset(sqlStmt);
             }
             else {
-                std::cout<<"error running query : "<<addGroupSql<<std::endl;
+                std::cout<<"error running query : "<<addRelationsSql<<std::endl;
             }
         }
         sqlite3PongFinalize(sqlStmt);
@@ -321,6 +327,26 @@ bool setProvidesData(const packageRelData &pRelData) {
     }
     return success;
 }
+
+bool setGroupRelData(const sqlite_int64 pkgId, const sqlite_int64 grId) {
+    const char *addGroupRelSql = "INSERT INTO groupRel (groupID, packageID) " \
+                                 "VALUES (?, ?);";
+    bool success = false;
+    sqlite3_stmt *sqlStmt;
+    if(sqlite3PongQuery(&sqlStmt, addGroupRelSql) &&
+            sqlite3PongBindInt64(sqlStmt, grId, 1) &&
+            sqlite3PongBindInt64(sqlStmt, pkgId, 2) &&
+            sqlite3PongStep(sqlStmt) &&
+            sqlite3PongFinalize(sqlStmt)) {
+        success = true;
+    }
+    else {
+        success = false;
+        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " : "<< pkgId <<" - "<<grId<<std::endl;
+    }
+    return success;
+}
+
 
 bool setDepData(const packageRelData &pRelData) {
     const char *addDepSql = "INSERT INTO deps (packageID, dependID, dependRel, dependVersion) " \
@@ -364,6 +390,7 @@ bool createNewDB() {
     createRelationsTable();
     createProvidesTable();
     createDepsTable();
+    createGroupRelations();
     return true;
 }
 
@@ -405,7 +432,9 @@ void getPkgData(const std::string &dbFile, pkgData &p) {
                 std::getline(file, p.arch);
                 break;
             case PackageLines::GROUPS:
-                std::getline(file, p.group);
+                while(std::getline(file, str) && str.size()>=1 && pacLines.find(str) == pacLines.cend()) {
+                    p.groupIds.push_back(globalDB::getGroupId(str));
+                }
                 break;
             }
         }
@@ -416,9 +445,8 @@ bool setPkgData(const pkgData &pData) {
     sqlite3_stmt *sqlStmt;
     bool success = false;
     sqlite3_int64 archId = globalDB::getArchId(pData.arch);
-    sqlite3_int64 grId = globalDB::getGrId(pData.group);
     const char *updatePkgDB = "INSERT INTO packages(name,description,version," \
-                              "csize,usize,sha1sum,arch,pgroup) VALUES(?,?,?,?,?,?,?,?) ;";
+                              "csize,usize,sha1sum,arch) VALUES(?,?,?,?,?,?,?) ;";
     if ( sqlite3PongQuery(&sqlStmt, updatePkgDB) &&
          sqlite3PongBindText(sqlStmt, pData.name, 1) &&
          sqlite3PongBindText(sqlStmt, pData.desc, 2) &&
@@ -427,11 +455,14 @@ bool setPkgData(const pkgData &pData) {
          sqlite3PongBindInt64(sqlStmt, pData.usize, 5) &&
          sqlite3PongBindText(sqlStmt, pData.sha1sum, 6) &&
          sqlite3PongBindInt(sqlStmt, archId, 7) &&
-         sqlite3PongBindInt(sqlStmt, grId, 8) &&
          sqlite3PongStep(sqlStmt) &&
          sqlite3PongFinalize(sqlStmt) )
     {
         success = true;
+        sqlite_int64 retPkgId = sqlite3_last_insert_rowid(globalDB::getDBHandle());
+        for(const auto& grId:pData.groupIds) {
+            setGroupRelData(retPkgId, grId);
+        }
     }
     else {
         success = false;
@@ -479,41 +510,29 @@ bool getDepData(const std::string &dbFile, packageRelData &pRelData) {
             continue;
         }
         if(str=="%DEPENDS%") {
-            while(std::getline(file, str))
+            while(std::getline(file, str) && str.size()>=1)
             {
-                if(str.size()<1) {
-                    break;
-                }
                 pRelData.pDeps.push_back(buildDep(str));
             }
         }
         else
             if(str=="%REPLACES%") {
-                while(std::getline(file, str))
+                while(std::getline(file, str) && str.size()>=1)
                 {
-                    if(str.size()<1) {
-                        break;
-                    }
                     pRelData.pReplaces.push_back(str);
                 }
             }
             else
                 if(str=="%CONFLICTS%") {
-                    while(std::getline(file, str))
+                    while(std::getline(file, str) && str.size()>=1)
                     {
-                        if(str.size()<1) {
-                            break;
-                        }
                         pRelData.pConflicts.push_back(str);
                     }
                 }
                 else
                     if(str=="%PROVIDES%") {
-                        while(std::getline(file, str))
+                        while(std::getline(file, str) && str.size()>=1)
                         {
-                            if(str.size()<1) {
-                                break;
-                            }
                             pRelData.pProvides.push_back(str);
                         }
                     }
