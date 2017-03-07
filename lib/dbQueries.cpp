@@ -15,18 +15,12 @@ bool getPkgID(pkgNameID &pkgNames) {
         return false;
     }
     else  {
-        if(pkgNames.size() == 1) {
-            getDirectDepsStr = "SELECT rowid, name FROM packages WHERE name=?;";
+        getDirectDepsStr = "SELECT rowid, name FROM packages WHERE name=? ";
+        for(unsigned int i=0; i<pkgNames.size()-1; i++) {
+            getDirectDepsStr += " OR name=?";
         }
-        else  {
-            getDirectDepsStr = "SELECT rowid, name FROM packages WHERE name=? ";
-            for(unsigned int i=0; i<pkgNames.size()-1; i++) {
-                getDirectDepsStr += " OR name=?";
-            }
-            getDirectDepsStr += " ;";
-        }
+        getDirectDepsStr += " ;";
     }
-    getDirectDepsStr ="SELECT rowid, name FROM packages WHERE name=?  OR name=? ;";
     if(sqlite3PongQuery(&sqlStmt, getDirectDepsStr.c_str()))   {
         unsigned int pNr = 1;
         for(const auto &pkg:pkgNames) {
@@ -53,79 +47,72 @@ bool getPkgID(pkgNameID &pkgNames) {
     return true;
 }
 
-bool allDepsQuery(int pkgID, std::string &retStr) {
+
+bool depQueryExec(const char* queryStr, const pkgNameID &reqPkgs, pkgNameID &retPkgs)
+{
     sqlite3_stmt *sqlStmt = nullptr;
     bool success = false;
-    const char *getAllDepsStr= "WITH RECURSIVE " \
+    if(sqlite3PongQuery(&sqlStmt, queryStr))   {
+        unsigned int pNr = 1;
+        for(const auto &pkg:reqPkgs) {
+            if(!sqlite3PongBindInt(sqlStmt, pkg.second, pNr)) {
+                break;
+            }
+            pNr++;
+        }
+        while(sqlite3_step(sqlStmt) == SQLITE_ROW) {
+            const unsigned char* dep = sqlite3_column_text(sqlStmt, 0);
+            retPkgs[(const char *)dep] = sqlite3_column_int64(sqlStmt, 1);
+        }
+        success = true;
+    }
+    else {
+        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<<std::endl;
+    }
+    sqlite3PongFinalize(sqlStmt);
+    return success;
+}
+
+bool allDepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
+    std::string getAllDepsStr= "WITH RECURSIVE " \
                                "alldeps(n) AS ( " \
-                               "SELECT deps.dependID FROM deps WHERE deps.packageID=? " \
-                               "UNION " \
-                               "SELECT deps.dependID FROM deps,alldeps WHERE deps.packageID=alldeps.n ) " \
-                               "SELECT name from alldeps JOIN packages ON packages.rowid=n ORDER BY name; ";
-    if(sqlite3PongQuery(&sqlStmt, getAllDepsStr) && sqlite3PongBindInt(sqlStmt, pkgID, 1)) {
-        while(sqlite3_step(sqlStmt) == SQLITE_ROW) {
-            const unsigned char* dep = sqlite3_column_text(sqlStmt, 0);
-            retStr += (const char *)dep;
-            retStr += " ";
-        }
-        success = true;
+                               "SELECT deps.dependID FROM deps WHERE deps.packageID=? ";
+    for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
+        getAllDepsStr += " OR deps.packageID=?";
     }
-    sqlite3PongFinalize(sqlStmt);
-    return success;
+    getAllDepsStr += " UNION " \
+                     "SELECT deps.dependID FROM deps,alldeps WHERE deps.packageID=alldeps.n ) " \
+                     "SELECT packages.name,packages.rowid from alldeps JOIN packages ON packages.rowid=n ORDER BY name; ";
+    return depQueryExec(getAllDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
-bool directDepsQuery(int pkgID, std::string &retStr) {
-    sqlite3_stmt *sqlStmt = nullptr;
-    bool success = false;
-    const char *getDirectDepsStr= "SELECT name FROM deps JOIN packages ON deps.dependID=packages.rowid WHERE deps.packageID=?";
-    if(sqlite3PongQuery(&sqlStmt, getDirectDepsStr) &&  sqlite3PongBindInt(sqlStmt, pkgID, 1)) {
-        while(sqlite3_step(sqlStmt) == SQLITE_ROW) {
-            const unsigned char* dep = sqlite3_column_text(sqlStmt, 0);
-            retStr += (const char *)dep;
-            retStr += " ";
-        }
-        success = true;
+bool directDepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
+    std::string getDirectDepsStr= "SELECT packages.name,packages.rowid FROM deps JOIN packages ON deps.dependID=packages.rowid WHERE deps.packageID=?";
+    for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
+        getDirectDepsStr += " OR deps.packageID=?";
     }
-    sqlite3PongFinalize(sqlStmt);
-    return success;
+    getDirectDepsStr += " ;";
+    return depQueryExec(getDirectDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
-bool rebuildDepsQuery(int pkgID, std::string &retStr) {
-    sqlite3_stmt *sqlStmt = nullptr;
-    bool success = false;
-    const char *getRebuildDepsStr= "SELECT name FROM deps JOIN packages ON deps.packageID=packages.rowid "
-                                   "WHERE deps.dependID=? AND NOT deps.dependRel=?;";
-    if(sqlite3PongQuery(&sqlStmt, getRebuildDepsStr) &&
-            sqlite3PongBindInt(sqlStmt, pkgID, 1) &&
-            sqlite3PongBindInt(sqlStmt, static_cast<int>(pRel::NONE), 2)) {
-
-        while(sqlite3_step(sqlStmt) == SQLITE_ROW) {
-            const unsigned char* dep = sqlite3_column_text(sqlStmt, 0);
-            retStr += (const char *)dep;
-            retStr += " ";
-        }
-        success = true;
+bool rebuildDepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
+    std::string getRebuildDepsStr= "SELECT packages.name,packages.rowid FROM deps JOIN packages ON deps.packageID=packages.rowid "
+                                   "WHERE deps.dependID=?";
+    for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
+        getRebuildDepsStr += " OR deps.dependID=?";
     }
-    sqlite3PongFinalize(sqlStmt);
-    return success;
+    getRebuildDepsStr += " AND NOT deps.dependRel="+ std::to_string(static_cast<unsigned int>(pRel::NONE)) +" ;";
+    return depQueryExec(getRebuildDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
-bool revdepsQuery(int pkgID, std::string &retStr) {
-    sqlite3_stmt *sqlStmt = nullptr;
-    bool succes = false;
-    const char *getRebuildDepsStr= "SELECT name FROM deps JOIN packages ON deps.packageID=packages.rowid "
-                                   "WHERE deps.dependID=?;";
-    if(sqlite3PongQuery(&sqlStmt, getRebuildDepsStr) && sqlite3PongBindInt(sqlStmt, pkgID, 1)) {
-        std::string depends = "";
-        while(sqlite3_step(sqlStmt) == SQLITE_ROW) {
-            const unsigned char* dep = sqlite3_column_text(sqlStmt, 0);
-            retStr += (const char *)dep;
-            retStr += " ";
-        }
-        succes = true;
-    }
-    sqlite3PongFinalize(sqlStmt);
-    return succes;
+bool revdepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
+     std::string getRebuildDepsStr= "SELECT packages.name,packages.rowid FROM deps JOIN packages ON deps.packageID=packages.rowid "
+                                   "WHERE deps.dependID=?";
+     for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
+         getRebuildDepsStr += " OR deps.dependID=?";
+     }
+     getRebuildDepsStr += " ;";
+     return depQueryExec(getRebuildDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
 
@@ -137,15 +124,25 @@ bool dbQuery(DBOpts opType,const std::vector<std::string> &opArg, std::string &r
     getPkgID(reqPkgs);
     for(const auto &pkg:reqPkgs) {
         if(pkg.second == -1) {
-             std::cout<<"package "<<pkg.first<<" not found in the database"<<std::endl;
+            std::cout<<"package "<<pkg.first<<" not found in the database"<<std::endl;
+            return false;
         }
     }
-    //    switch (opType) {
-    //    case DBOpts::OP_ALL_DEPS:       return allDepsQuery(pkgId, retStr);
-    //    case DBOpts::OP_DIRECT_DEPS:    return directDepsQuery(pkgId, retStr);
-    //    case DBOpts::OP_REBUILD_DEPS:   return rebuildDepsQuery(pkgId, retStr);
-    //    case DBOpts::OP_REV_DEPS:       return revdepsQuery(pkgId, retStr);
-    //    default: std::cout<<"unknown op"<<std::endl;    return "";
-    //    }
+    pkgNameID foundPkgs;
+    switch (opType) {
+    case DBOpts::OP_ALL_DEPS:       allDepsQuery(reqPkgs, foundPkgs);
+        break;
+    case DBOpts::OP_DIRECT_DEPS:    directDepsQuery(reqPkgs, foundPkgs);
+        break;
+    case DBOpts::OP_REBUILD_DEPS:   rebuildDepsQuery(reqPkgs, foundPkgs);
+        break;
+    case DBOpts::OP_REV_DEPS:       revdepsQuery(reqPkgs, foundPkgs);
+        break;
+    default: std::cout<<"unknown op"<<std::endl;
+        return false;
+    }
+    for(const auto &pkg:foundPkgs) {
+        retStr += pkg.first + " ";
+    }
     return true;
 }
