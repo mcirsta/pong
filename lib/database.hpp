@@ -15,9 +15,11 @@ bool createNewDB();
 bool importData(const std::string &dbpath);
 
 struct pkgData {
-    std::string name, desc, version, sha1sum, arch;
+    std::string desc, version, sha1sum, arch;
     sqlite3_int64 csize=0,usize=0, dbPkgId=0;
     std::vector<sqlite_int64> groupIds;
+    bool installed, localPkg;
+    std::string installedVer;
 };
 
 enum class pRel { NONE = 1,
@@ -39,6 +41,8 @@ typedef std::vector<std::string> pkgReplaces;
 typedef std::vector<std::string> pkgConflicts;
 typedef std::vector<std::string> pkgProvides;
 typedef sqlite3_stmt* p_sqlite3_stmt;
+
+typedef std::map<std::string, pkgData> allPkgsMap;
 
 struct packageRelData {
     std::string pkgName;

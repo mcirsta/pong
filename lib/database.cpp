@@ -37,6 +37,9 @@ const std::map<std::string, PackageLines> pacLines =  { {"%NAME%", PackageLines:
 
 std::vector<packageRelData> pkgRelData;
 
+allPkgsMap allPongPkgs;
+
+bool importDeps(const std::string &dbFile, const std::string &pName);
 
 void globalDB::setDBHandle(sqlite3 * dbH) {
     DBHandle = dbH;
@@ -273,7 +276,10 @@ bool createPackages() {
                                   "csize          INT     NOT NULL," \
                                   "usize          INT     NOT NULL," \
                                   "arch           INT     NOT NULL REFERENCES archs," \
-                                  "sha1sum        TEXT);";
+                                  "sha1sum        TEXT    NOT NULL," \
+                                  "installed      BOOLEAN," \
+                                  "installedVer   TEXT," \
+                                  "localPkg       BOOLEAN);";
     return createDBQuery(createMainDBStr);
 }
 
@@ -394,7 +400,8 @@ bool createNewDB() {
     return true;
 }
 
-void getPkgData(const std::string &dbFile, pkgData &p) {
+void getPkgData(const std::string &dbFile, std::string &pkgName) {
+    pkgData p;
     std::ifstream file(dbFile);
     std::string str;
     std::map<std::string, PackageLines>::const_iterator pEnumLine;
@@ -409,7 +416,7 @@ void getPkgData(const std::string &dbFile, pkgData &p) {
         if(pEnumLine != pacLines.cend()) {
             switch(pEnumLine->second) {
             case PackageLines::NAME:
-                std::getline(file, p.name);
+                std::getline(file, pkgName);
                 break;
             case PackageLines::VERSION:
                 std::getline(file, p.version);
@@ -439,22 +446,30 @@ void getPkgData(const std::string &dbFile, pkgData &p) {
             }
         }
     }
+    p.installed = false;
+    p.localPkg = false;
+    p.installedVer = "";
+    allPongPkgs[pkgName] = p;
 }
 
-bool setPkgData(const pkgData &pData) {
+bool setPkgData(const std::string pName, const pkgData &pData) {
     sqlite3_stmt *sqlStmt;
     bool success = false;
     sqlite3_int64 archId = globalDB::getArchId(pData.arch);
     const char *updatePkgDB = "INSERT INTO packages(name,description,version," \
-                              "csize,usize,sha1sum,arch) VALUES(?,?,?,?,?,?,?) ;";
+                              "csize,usize,sha1sum,arch,installed,installedVer,localPkg) " \
+                              "VALUES(?,?,?,?,?,?,?,?,?,?) ;";
     if ( sqlite3PongQuery(&sqlStmt, updatePkgDB) &&
-         sqlite3PongBindText(sqlStmt, pData.name, 1) &&
+         sqlite3PongBindText(sqlStmt, pName, 1) &&
          sqlite3PongBindText(sqlStmt, pData.desc, 2) &&
          sqlite3PongBindText(sqlStmt, pData.version, 3) &&
          sqlite3PongBindInt64(sqlStmt, pData.csize, 4) &&
          sqlite3PongBindInt64(sqlStmt, pData.usize, 5) &&
          sqlite3PongBindText(sqlStmt, pData.sha1sum, 6) &&
          sqlite3PongBindInt(sqlStmt, archId, 7) &&
+         sqlite3PongBindInt(sqlStmt, pData.installed, 8) &&
+         sqlite3PongBindText(sqlStmt, pData.installedVer, 9) &&
+         sqlite3PongBindInt(sqlStmt, pData.localPkg, 10) &&
          sqlite3PongStep(sqlStmt) &&
          sqlite3PongFinalize(sqlStmt) )
     {
@@ -466,18 +481,10 @@ bool setPkgData(const pkgData &pData) {
     }
     else {
         success = false;
-        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " package: "<<pData.name<<std::endl;
+        std::cout<<sqlite3_errmsg(globalDB::getDBHandle())<< " package: "<<pName<<std::endl;
     }
 
     return success;
-}
-
-bool importGeneral(const std::string &dbFile, std::string &addPname) {
-    pkgData pData;
-    getPkgData(dbFile,pData);
-    setPkgData(pData);
-    addPname = pData.name;
-    return true;
 }
 
 pkgDep buildDep(const std::string &str) {
@@ -562,10 +569,10 @@ bool importData(const std::string &dbpath) {
             {
                 std::string fileDb = dbpath + "/" +dir->d_name + "/" + "desc";
                 std::string depsDb = dbpath + "/" +dir->d_name + "/" + "depends";
-                std::string addedPkgName;
-                importGeneral(fileDb, addedPkgName);
+                std::string pkgName;
+                getPkgData(fileDb, pkgName);
+                importDeps(depsDb, pkgName);
                 std::remove(fileDb.c_str());
-                importDeps(depsDb, addedPkgName);
                 std::remove(depsDb.c_str());
                 int r = rmdir((dbpath + "/" +dir->d_name).c_str());
                 if(r == -1)
@@ -578,6 +585,14 @@ bool importData(const std::string &dbpath) {
     }
     std::string dbVerFile =  dbpath + "/.version";
     std::remove(dbVerFile.c_str());
+    return true;
+}
+
+bool setDataInDB() {
+    for(const auto &x : allPongPkgs)
+    {
+        setPkgData(x.first, x.second);
+    }
     for(const auto &x : pkgRelData) {
         setProvidesData(x);
     }
@@ -597,6 +612,7 @@ bool initDB(const std::string& oldPath) {
         openNewDB(NEW_PATH);
         createNewDB();
         importData(NEW_PATH);
+        setDataInDB();
     }
     else {
         openNewDB(NEW_PATH);
