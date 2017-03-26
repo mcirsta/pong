@@ -365,7 +365,7 @@ bool setDepData(const packageRelData &pRelData) {
                     sqlite3PongBindText(sqlStmt, pRelData.pkgName, 1) &&
                     sqlite3PongBindText(sqlStmt, x.depName, 2) &&
                     sqlite3PongBindInt(sqlStmt,static_cast<int>(x.depRel), 3) &&
-                    sqlite3PongBindText(sqlStmt, x.depName, 4) &&
+                    sqlite3PongBindText(sqlStmt, x.depVer, 4) &&
                     sqlite3PongStep(sqlStmt) &&
                     sqlite3PongFinalize(sqlStmt))
             {

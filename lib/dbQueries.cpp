@@ -76,42 +76,42 @@ bool depQueryExec(const char* queryStr, const pkgNameID &reqPkgs, pkgNameID &ret
 bool allDepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
     std::string getAllDepsStr= "WITH RECURSIVE " \
                                "alldeps(n) AS ( " \
-                               "SELECT deps.dependID FROM deps WHERE deps.packageID=? ";
+                               "SELECT deps.dependID FROM deps WHERE ( deps.packageID=? ";
     for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
         getAllDepsStr += " OR deps.packageID=?";
     }
-    getAllDepsStr += " UNION " \
+    getAllDepsStr += " ) UNION " \
                      "SELECT deps.dependID FROM deps,alldeps WHERE deps.packageID=alldeps.n ) " \
                      "SELECT packages.name,packages.rowid from alldeps JOIN packages ON packages.rowid=n ORDER BY name; ";
     return depQueryExec(getAllDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
 bool directDepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
-    std::string getDirectDepsStr= "SELECT packages.name,packages.rowid FROM deps JOIN packages ON deps.dependID=packages.rowid WHERE deps.packageID=?";
+    std::string getDirectDepsStr= "SELECT packages.name,packages.rowid FROM deps JOIN packages ON deps.dependID=packages.rowid WHERE ( deps.packageID=?";
     for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
         getDirectDepsStr += " OR deps.packageID=?";
     }
-    getDirectDepsStr += " ;";
+    getDirectDepsStr += " );";
     return depQueryExec(getDirectDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
 bool rebuildDepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
     std::string getRebuildDepsStr= "SELECT packages.name,packages.rowid FROM deps JOIN packages ON deps.packageID=packages.rowid "
-                                   "WHERE deps.dependID=?";
+                                   "WHERE ( deps.dependID=?";
     for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
         getRebuildDepsStr += " OR deps.dependID=?";
     }
-    getRebuildDepsStr += " AND NOT deps.dependRel="+ std::to_string(static_cast<unsigned int>(pRel::NONE)) +" ;";
+    getRebuildDepsStr += " ) AND NOT deps.dependRel="+ std::to_string(static_cast<unsigned int>(pRel::NONE)) +" ;";
     return depQueryExec(getRebuildDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
 bool revdepsQuery(const pkgNameID &reqPkgs, pkgNameID &retPkgs) {
      std::string getRebuildDepsStr= "SELECT packages.name,packages.rowid FROM deps JOIN packages ON deps.packageID=packages.rowid "
-                                   "WHERE deps.dependID=?";
+                                   "WHERE ( deps.dependID=?";
      for(unsigned int i=0; i<reqPkgs.size()-1; i++) {
          getRebuildDepsStr += " OR deps.dependID=?";
      }
-     getRebuildDepsStr += " ;";
+     getRebuildDepsStr += " );";
      return depQueryExec(getRebuildDepsStr.c_str(), reqPkgs, retPkgs);
 }
 
