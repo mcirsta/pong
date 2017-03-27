@@ -400,8 +400,7 @@ bool createNewDB() {
     return true;
 }
 
-void getPkgData(const std::string &dbFile, std::string &pkgName) {
-    pkgData p;
+void getPkgData(const std::string &dbFile, std::string &pkgName, pkgData &p) {
     std::ifstream file(dbFile);
     std::string str;
     std::map<std::string, PackageLines>::const_iterator pEnumLine;
@@ -449,7 +448,6 @@ void getPkgData(const std::string &dbFile, std::string &pkgName) {
     p.installed = false;
     p.localPkg = false;
     p.installedVer = "";
-    allPongPkgs[pkgName] = p;
 }
 
 bool setPkgData(const std::string pName, const pkgData &pData) {
@@ -570,7 +568,9 @@ bool importData(const std::string &dbpath) {
                 std::string fileDb = dbpath + "/" +dir->d_name + "/" + "desc";
                 std::string depsDb = dbpath + "/" +dir->d_name + "/" + "depends";
                 std::string pkgName;
-                getPkgData(fileDb, pkgName);
+                pkgData pData;
+                getPkgData(fileDb, pkgName, pData);
+                allPongPkgs[pkgName] = pData;
                 importDeps(depsDb, pkgName);
                 std::remove(fileDb.c_str());
                 std::remove(depsDb.c_str());
@@ -588,9 +588,39 @@ bool importData(const std::string &dbpath) {
     return true;
 }
 
+bool importLocalData(const std::string &dbpath) {
+    DIR           *d;
+    struct dirent *dir;
+    d = opendir(dbpath.c_str());
+    if (d) {
+        while ((dir = readdir(d)) != NULL)
+        {
+            if(dir->d_type == DT_DIR && strcmp(dir->d_name,".") && strcmp(dir->d_name,".."))
+            {
+                std::string fileDb = dbpath + "/" +dir->d_name + "/" + "desc";
+                std::string pkgName;
+                std::string pkgVer;
+                pkgData pData;
+                getPkgData(fileDb, pkgName, pData);
+                allPkgsMap::iterator pIt = allPongPkgs.find(pkgName);
+                if(pIt != allPongPkgs.end()) {
+                    pIt->second.installed = 1;
+                    pIt->second.installedVer = pkgVer;
+                }
+                else {
+                    std::cout<<"local version: "<<pkgName<<std::endl;
+                    //getPkgData(fileDb, pkgName);
+                   // importDeps(depsDb, pkgName);
+                }
+            }
+        }
+        closedir(d);
+    }
+    return true;
+}
+
 bool setDataInDB() {
-    for(const auto &x : allPongPkgs)
-    {
+    for(const auto &x : allPongPkgs) {
         setPkgData(x.first, x.second);
     }
     for(const auto &x : pkgRelData) {
@@ -612,6 +642,7 @@ bool initDB(const std::string& oldPath) {
         openNewDB(NEW_PATH);
         createNewDB();
         importData(NEW_PATH);
+        importLocalData("/var/lib/pacman-g2/local");
         setDataInDB();
     }
     else {
