@@ -10,6 +10,12 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+#include <fstream>
+#include <sys/stat.h>
+
+
+#include <chrono>
+
 sqlite3 *globalDB::DBHandle = nullptr;
 std::map <std::string,sqlite3_int64> globalDB::grIds;
 std::map <std::string,sqlite3_int64> globalDB::archIds;
@@ -24,20 +30,29 @@ std::vector<std::pair<pRel,std::string>> dSigns = { {pRel::MORE_EQ, ">="},
                                                   };
 
 
-const std::map<std::string, PackageLines> pacLines =  { {"%NAME%", PackageLines::NAME},
-                                                  {"%VERSION%", PackageLines::VERSION},
-                                                  {"%DESC%", PackageLines::DESC},
-                                                  {"%SHA1SUM%",  PackageLines::SHA1SUM},
-                                                  {"%CSIZE%", PackageLines::CSIZE},
-                                                  {"%USIZE%", PackageLines::USIZE},
-                                                  {"%ARCH%", PackageLines::ARCH},
-                                                  {"%GROUPS%", PackageLines::GROUPS},
+const std::map<std::string, PackageLines> pacLines =  { {"%NAME%",  PackageLines::NAME},
+                                                  {"%VERSION%",     PackageLines::VERSION},
+                                                  {"%DESC%",        PackageLines::DESC},
+                                                  {"%SHA1SUM%",     PackageLines::SHA1SUM},
+                                                  {"%CSIZE%",       PackageLines::CSIZE},
+                                                  {"%USIZE%",       PackageLines::USIZE},
+                                                  {"%ARCH%",        PackageLines::ARCH},
+                                                  {"%GROUPS%",      PackageLines::GROUPS},
+                                                  {"%URL%",         PackageLines::URL},
+                                                  {"%SIZE%",        PackageLines::SIZE},
+                                                  {"%BUILDDATE%",     PackageLines::BUILDDATE},
+                                                  {"%BUILDTYPE%",   PackageLines::BUILDTYPE},
+                                                  {"%INSTALLDATE%", PackageLines::INSTALLDATE},
+                                                  {"%PACKAGER%",    PackageLines::PACKAGER},
+                                                  {"%REASON%",      PackageLines::REASON},
                                                 };
 
 
 std::vector<packageRelData> pkgRelData;
 
 allPkgsMap allPongPkgs;
+localPkgsMap localPongPkgs;
+
 
 bool importDeps(const std::string &dbFile, const std::string &pName);
 
@@ -283,6 +298,19 @@ bool createPackages() {
     return createDBQuery(createMainDBStr);
 }
 
+bool createLocalPackages() {
+    const char *createLocalPkgDBStr = "CREATE TABLE localPackages ( " \
+                                  "name           TEXT  UNIQUE  NOT NULL," \
+                                  "description    TEXT    NOT NULL," \
+                                  "version        TEXT    NOT NULL," \
+                                  "size          INT     NOT NULL," \
+                                  "arch           INT     NOT NULL REFERENCES archs," \
+                                  "sha1sum        TEXT    NOT NULL," \
+                                  "installed      BOOLEAN," \
+                                  "installedVer   TEXT," \
+                                  "localPkg       BOOLEAN);";
+    return createDBQuery(createLocalPkgDBStr);
+}
 
 bool createRelationsTable() {
     const char *createRelTableStr = "CREATE TABLE depRels ( " \
@@ -442,12 +470,74 @@ void getPkgData(const std::string &dbFile, std::string &pkgName, pkgData &p) {
                     p.groupIds.push_back(globalDB::getGroupId(str));
                 }
                 break;
+            default:  break;
             }
         }
     }
     p.installed = false;
     p.localPkg = false;
     p.installedVer = "";
+}
+
+void getPkgLocalData(const std::string &dbFile, std::string &pkgName, pkgLocalData &p) {
+    std::ifstream file(dbFile);
+    std::string str;
+    std::map<std::string, PackageLines>::const_iterator pEnumLine;
+    p.reason = instReason::UNKNOWN;
+    while (std::getline(file, str))
+    {
+        if(str.size()<1) {
+            continue;
+        }
+
+        pEnumLine = pacLines.find(str);
+
+        if(pEnumLine != pacLines.cend()) {
+            switch(pEnumLine->second) {
+            case PackageLines::NAME:
+                std::getline(file, pkgName);
+                break;
+            case PackageLines::VERSION:
+                std::getline(file, p.version);
+                break;
+            case PackageLines::DESC:
+                std::getline(file, p.desc);
+                break;
+            case PackageLines::ARCH:
+                std::getline(file, p.arch);
+                break;
+            case PackageLines::URL:
+                std::getline(file,p.url);
+                break;
+            case PackageLines::BUILDDATE:
+                std::getline(file, p.buildDate);
+                break;
+            case PackageLines::BUILDTYPE:
+                std::getline(file, p.buildType);
+                break;
+            case PackageLines::INSTALLDATE:
+                std::getline(file, p.installDate);
+                break;
+            case PackageLines::PACKAGER:
+                std::getline(file, p.packager);
+                break;
+            case PackageLines::SIZE:
+                std::getline(file, str);
+                p.size = std::stoi(str);
+                break;
+            case PackageLines::REASON:
+                std::getline(file, str);
+                p.reason = static_cast<instReason>(std::stoi(str));
+                break;
+            case PackageLines::GROUPS:
+                while(std::getline(file, str) && str.size()>=1 && pacLines.find(str) == pacLines.cend()) {
+                    p.groupIds.push_back(globalDB::getGroupId(str));
+                }
+                break;
+            default: break;
+            }
+        }
+    }
 }
 
 bool setPkgData(const std::string pName, const pkgData &pData) {
@@ -558,6 +648,7 @@ bool importDeps(const std::string &dbFile, const std::string &pName) {
 bool importData(const std::string &dbpath) {
     DIR           *d;
     struct dirent *dir;
+    auto start = std::chrono::system_clock::now();
     d = opendir(dbpath.c_str());
     if (d)
     {
@@ -583,6 +674,9 @@ bool importData(const std::string &dbpath) {
         }
         closedir(d);
     }
+    auto end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    std::cout << "Elapsed ms: " << elapsed.count() << '\n';
     std::string dbVerFile =  dbpath + "/.version";
     std::remove(dbVerFile.c_str());
     return true;
@@ -600,8 +694,8 @@ bool importLocalData(const std::string &dbpath) {
                 std::string fileDb = dbpath + "/" +dir->d_name + "/" + "desc";
                 std::string pkgName;
                 std::string pkgVer;
-                pkgData pData;
-                getPkgData(fileDb, pkgName, pData);
+                pkgLocalData pLocalData;
+                getPkgLocalData(fileDb, pkgName, pLocalData);
                 allPkgsMap::iterator pIt = allPongPkgs.find(pkgName);
                 if(pIt != allPongPkgs.end()) {
                     pIt->second.installed = 1;
@@ -612,6 +706,7 @@ bool importLocalData(const std::string &dbpath) {
                     //getPkgData(fileDb, pkgName);
                    // importDeps(depsDb, pkgName);
                 }
+                localPongPkgs[pkgName] = pLocalData;
             }
         }
         closedir(d);

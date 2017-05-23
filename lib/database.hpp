@@ -23,13 +23,26 @@ struct pkgData {
 };
 
 enum class pRel { NONE = 1,
-       LESS,
-       LESS_EQ,
-       EQ,
-       MORE,
-       MORE_EQ,
-       MAX,
-     };
+                  LESS,
+                  LESS_EQ,
+                  EQ,
+                  MORE,
+                  MORE_EQ,
+                  MAX,
+                };
+
+enum class instReason { EXPLICIT  = 0,  /* explicitly requested by the user */
+                        DEPEND    = 1,  /* installed as a dependency for another package */
+                        UNKNOWN   = 2,  /* not mentioned in local install file */
+                      };
+
+struct pkgLocalData {
+    std::string desc, version, url, arch, buildDate, buildType, installDate, packager;
+    instReason reason;
+    sqlite3_int64 size=0, dbPkgId=0;
+    std::vector<sqlite_int64> groupIds;
+};
+
 
 struct pkgDep {
     std::string depName, depVer;
@@ -43,6 +56,7 @@ typedef std::vector<std::string> pkgProvides;
 typedef sqlite3_stmt* p_sqlite3_stmt;
 
 typedef std::map<std::string, pkgData> allPkgsMap;
+typedef std::map<std::string, pkgLocalData> localPkgsMap;
 
 struct packageRelData {
     std::string pkgName;
@@ -72,13 +86,21 @@ bool sqlite3PongFinalize(p_sqlite3_stmt &sqlStmt);
 
 enum class PackageLines {
     NAME,
-            VERSION,
-            DESC,
-            SHA1SUM,
-            CSIZE,
-            USIZE,
-            ARCH,
-            GROUPS,
+    VERSION,
+    DESC,
+    SHA1SUM,
+    CSIZE,
+    USIZE,
+    ARCH,
+    GROUPS,
+    //local DB
+    URL,
+    SIZE,
+    BUILDDATE,
+    BUILDTYPE,
+    INSTALLDATE,
+    PACKAGER,
+    REASON,
 };
 
 #endif
